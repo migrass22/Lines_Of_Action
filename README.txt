@@ -1,3 +1,3 @@
-END OF YEAR PROJECT - _Lines Of Action_
+END OF YEAR PROJECT - Lines Of Action
 
 Created by Tom A. Peleg
