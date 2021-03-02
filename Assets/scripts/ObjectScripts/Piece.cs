@@ -18,5 +18,12 @@ public class Piece
         // The player this piece belongs to
         this.player = player;
     }
+    public Piece(Vector2Int position, bool player) 
+    {
+        // Its relative position
+        this.position = position;
+        // The player this piece belongs to
+        this.player = player;
+    }
 
 }
