@@ -71,7 +71,7 @@ public class LOAman : MonoBehaviour
             controller.GetComponent<Game>().CleanUp();
             controller.GetComponent<Game>().InitializeGame();
         }
-        else if (controller.GetComponent<Game>().GetCurrentPlayer() == player)
+        if (player)
         {
             DestroyMovePlates();
             InitMovePlates();
@@ -164,7 +164,19 @@ public class LOAman : MonoBehaviour
         }
     }
 
-    private bool IsBefore(int x, int y, int enemyx, int enemyy) 
+    // get vector for position and check of its legit for moves
+    public bool CheckLegit(Vector2Int v, Model m)
+    {
+        if (m.IsOnBoard(v.x, v.y))
+        {
+            if (m.board.IsPieceHere(v.x, v.y))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    public bool IsBefore(int x, int y, int enemyx, int enemyy) 
     {
         int dist1x = x - xBoard, dist2x = enemyx - xBoard, dist1y = y - yBoard, dist2y = enemyy - yBoard;
         return Math.Abs(dist1x) <= Math.Abs(dist2x) && Math.Abs(dist1y) <= Math.Abs(dist2y);

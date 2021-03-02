@@ -3,15 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class AI 
+public class AI
 {
-    GameObject controller;
+    GameObject controller = GameObject.FindGameObjectWithTag("GameController");
     BitBoard b;
     List<Piece> possiblemove = new List<Piece>();
-    public AI(GameObject obj) 
-    {
-        controller = obj;
-    }
+
     // Ai is always black
     public void GetPossibleMoves(Vector2Int dir, Piece now) 
     {
@@ -80,7 +77,7 @@ public class AI
         GetPossibleMoves(new Vector2Int(1, 1), now);
         GetPossibleMoves(new Vector2Int(-1, 1), now);
     }
-    public Move MakeMove(BitBoard b, Model m, int depth) 
+    public void MakeMove(BitBoard b, Model m, int depth) 
     {
 
         int max = -1000, temp;
@@ -101,11 +98,12 @@ public class AI
             }
             possiblemove = new List<Piece>();
         }
-        if (depth == 0) 
-        {
-            return new Move(move, max);
-        }
-        return MakeMove(b, m, depth - 1);
+        actuallymove(bestPiece, m, move);
+        //if (depth == 0) 
+        //{
+        //    return new Move(move, max);
+        //}
+        //return MakeMove(b, m, depth - 1);
     }
 
 

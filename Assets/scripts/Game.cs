@@ -100,6 +100,12 @@ public class Game : MonoBehaviour
         turncounter++;
         // Change player
         currentplayer = !currentplayer;
+        if (!currentplayer)
+        {
+            AI ai = new AI();
+            ai.MakeMove(model.board, model, 2);
+        }
+
         // Update the turn counter
         UpdateTurns(currentplayer, turncounter);
     }
