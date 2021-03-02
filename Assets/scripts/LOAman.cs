@@ -136,30 +136,28 @@ public class LOAman : MonoBehaviour
 
         x = xBoard + (counter * dir.x);
         y = yBoard + (counter * dir.y);
-        if (model.IsOnBoard(x, y) && (IsBefore(x,y,enemy1x,enemy1y) || flag1))
-        {
-            if (!model.board.IsPieceHere(x, y))
-            {
-                MovePlateSpawn(x, y, false);
-            }
-            else if (model.GetPieceByIndex(x, y).player != player)
-            {
-                MovePlateSpawn(x, y, true);
-            }
-        }
+        MakeTypePlates(model, new Vector2Int(x, y), new Vector2Int(enemy1x, enemy1y), flag1);
 
 
         antiX = xBoard + (counter * - dir.x);
         antiY = yBoard + (counter * - dir.y);
-        if (model.IsOnBoard(antiX, antiY) && (IsBefore(antiX,antiY,enemy2x,enemy2y) || flag2))
+        MakeTypePlates(model, new Vector2Int(antiX, antiY), new Vector2Int(enemy2x, enemy2y), flag2);
+    }
+
+    // Decide based on positions if the plate created should be attack one or normal one
+    public void MakeTypePlates(Model m, Vector2Int pos, Vector2Int enemy, bool flag)
+    {
+
+        if (m.IsOnBoard(pos.x, pos.y) && (IsBefore(pos.x, pos.y, enemy.x, enemy.y) || flag))
         {
-            if (!model.board.IsPieceHere(antiX, antiY))
+            if (!m.board.IsPieceHere(pos.x, pos.y))
             {
-                MovePlateSpawn(antiX, antiY, false);
+                MovePlateSpawn(pos.x, pos.y, false);
+
             }
-            else if (model.GetPieceByIndex(antiX, antiY).player != player)
+            else if (m.GetPieceByIndex(pos.x, pos.y).player)
             {
-                MovePlateSpawn(antiX, antiY, true);
+                MovePlateSpawn(pos.x, pos.y, true);
             }
         }
     }
@@ -182,6 +180,7 @@ public class LOAman : MonoBehaviour
         return Math.Abs(dist1x) <= Math.Abs(dist2x) && Math.Abs(dist1y) <= Math.Abs(dist2y);
     }
 
+    // Create the move plate sprites using the positions deemed possible to move to
     private void MovePlateSpawn(int matirxX, int matirxY, bool attack)
     {
         float x = matirxX;

@@ -7,6 +7,7 @@ public class AI
 {
     GameObject controller = GameObject.FindGameObjectWithTag("GameController");
     BitBoard b;
+    Model temp;
     List<Piece> possiblemove = new List<Piece>();
 
     // Ai is always black
@@ -77,9 +78,17 @@ public class AI
         GetPossibleMoves(new Vector2Int(1, 1), now);
         GetPossibleMoves(new Vector2Int(-1, 1), now);
     }
-    public void MakeMove(BitBoard b, Model m, int depth) 
-    {
 
+    public void MakeMove(Model m) 
+    {
+        // Copy everything from the given model to the temporary one
+        temp.board = m.board;
+        Move best = BestMove(temp, 2);
+        actuallymove(m, best);
+    }
+
+    public Move BestMove(Model m, int depth) 
+    {
         int max = -1000, temp;
         Piece bestPiece = null;
         Piece move = null;
@@ -98,13 +107,18 @@ public class AI
             }
             possiblemove = new List<Piece>();
         }
-        actuallymove(bestPiece, m, move);
-        //if (depth == 0) 
-        //{
-        //    return new Move(move, max);
-        //}
-        //return MakeMove(b, m, depth - 1);
-    }
+        //actuallymove(bestPiece, m, move);
+        if (depth == 0)
+        {
+            return new Move(bestPiece, move.position, max, move.player);
+        }
+        Move back = BestMove(m, depth - 1);
+        if (back != null) 
+        {
+            back.score += max;
+        }
+        return null;
+    }   
 
 
     public int evaluate(BitBoard b,Vector2Int before, Vector2Int move, bool attack, Model m) 
@@ -133,12 +147,13 @@ public class AI
         return score;
     }
 
-    public void actuallymove(Piece p, Model m, Piece move) 
+    public void actuallymove(Model m, Move move) 
     {
-        Vector2Int before = new Vector2Int(p.piece.GetComponent<LOAman>().GetXBoard(), p.piece.GetComponent<LOAman>().GetYBoard());
+        Vector2Int before = new Vector2Int(move.pieceToMove.piece.GetComponent<LOAman>().GetXBoard(), 
+            move.pieceToMove.piece.GetComponent<LOAman>().GetYBoard());
         controller = GameObject.FindGameObjectWithTag("GameController");
         Piece BeforePiece = m.GetPieceByIndex(before.x, before.y);
-        Piece piece = m.GetPieceByIndex(move.position.x, move.position.y);
+        Piece piece = m.GetPieceByIndex(move.moveto.x, move.moveto.y);
         int old = before.x + 8 * before.y - 1;
         if (piece != null)
         {
@@ -151,12 +166,12 @@ public class AI
             }
         }
 
-        BeforePiece.piece.GetComponent<LOAman>().SetXBoard(move.position.x);
-        BeforePiece.piece.GetComponent<LOAman>().SetYBoard(move.position.y);
+        BeforePiece.piece.GetComponent<LOAman>().SetXBoard(move.moveto.x);
+        BeforePiece.piece.GetComponent<LOAman>().SetYBoard(move.moveto.y);
         BeforePiece.piece.GetComponent<LOAman>().SetCorods();
-        m.UpdatePosition(BeforePiece, move.position);
+        m.UpdatePosition(BeforePiece, move.moveto);
         BeforePiece.piece.GetComponent<LOAman>().DestroyMovePlates();
-        m.board.MakeMove(old, move.position.x + move.position.y * 8 - 1, controller.GetComponent<Game>().GetCurrentPlayer());
+        m.board.MakeMove(old, move.moveto.x + move.moveto.y * 8 - 1, controller.GetComponent<Game>().GetCurrentPlayer());
         m.board.SetBitBoard(m.board.GetWhites() | m.board.GetBlacks());
         if (m.checkwin(controller.GetComponent<Game>().GetCurrentPlayer()))
         {

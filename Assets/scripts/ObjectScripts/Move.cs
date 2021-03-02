@@ -5,15 +5,22 @@ using UnityEngine;
 // class to hold moves for ai, with score
 public class Move 
 {
-    // piece up for current move
-    public Piece p { get; set; }
-    // score of the piece
+    // Piece up for current move
+    public Piece pieceToMove { get; set; }
+    // Where to move the piece to
+    public Vector2Int moveto { get; set; }
+    // Score of the piece
     public int score { get; set; }
+    // State of move, is it attacking something or not
+    public bool attack { get; set; }
 
-    public Move(Piece p, int score)
+    // Ctor
+    public Move(Piece pieceToMove, Vector2Int moveto, int score, bool attack)
     {
-        this.p = p;
+        this.moveto = moveto;
+        this.pieceToMove = pieceToMove;
         this.score = score;
+        this.attack = attack;
     }
 
 
