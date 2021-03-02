@@ -55,6 +55,20 @@ public class BitBoard
                ((index + 2) % 8 == 0 && i.x == 1) || (index + i.x + i.y < 0);
     }
 
+    // Get a bool for a player and check if the position given is pointing to the other players pieces
+    public bool IsEnemy(Vector2Int pos, bool player) 
+    {
+        // If true check for black pieces if false check for white pieces
+        if (player)
+        {
+            return IsBlackPiece(pos.x, pos.y);
+        }
+        else 
+        {
+            return IsWhitePiece(pos.x, pos.y);
+        }
+    }
+
     public Vector2Int[] GetDirections()
     {
         return directions;

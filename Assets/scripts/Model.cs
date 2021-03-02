@@ -20,7 +20,7 @@ public class Model
     }
 
     // Get a bool of a player and return the list of the pieces for that player
-    private List<Piece> GetPiecesByBool(bool player)
+    public List<Piece> GetPiecesByBool(bool player)
     {
         if (player)
         {
