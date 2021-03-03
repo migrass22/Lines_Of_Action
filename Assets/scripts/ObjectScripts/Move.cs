@@ -22,6 +22,12 @@ public class Move
         this.score = score;
         this.attack = attack;
     }
-
+    public Move() 
+    {
+        this.moveto = new Vector2Int(0, 0);
+        this.pieceToMove = null;
+        this.score = 0;
+        this.attack = false;
+    }
 
 }

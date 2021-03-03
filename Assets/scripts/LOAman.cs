@@ -155,7 +155,7 @@ public class LOAman : MonoBehaviour
                 MovePlateSpawn(pos.x, pos.y, false);
 
             }
-            else if (m.GetPieceByIndex(pos.x, pos.y).player)
+            else if (m.GetPieceByIndex(pos.x, pos.y).player != player)
             {
                 MovePlateSpawn(pos.x, pos.y, true);
             }

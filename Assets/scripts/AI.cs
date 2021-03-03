@@ -16,6 +16,23 @@ public class AI
     List<Piece> possiblemove = new List<Piece>();
     bool player = false;
 
+    public Model CopyModel(Model m) 
+    {
+        Model mnew = new Model();
+        mnew.InitModel();
+        foreach (Piece p in m.whites) 
+        {
+            mnew.whites.Add(new Piece(p.position, p.player));
+        }
+        foreach (Piece p in m.blacks)
+        {
+            mnew.blacks.Add(new Piece(p.position, p.player));
+        }
+        mnew.board = m.board;
+        return mnew;
+    }
+
+
     // Ai is always black
     public void GetPossibleMoves(Vector2Int dir, Vector2Int now) 
     {
@@ -95,12 +112,12 @@ public class AI
     public void MakeMove(Model m) 
     {
         // Copy everything from the given model to the temporary one
-        temp.board = m.board;
+        temp = CopyModel(m);
 
-        // copy function here
+        Move best = RecursionMove(temp, 2, new Move()) ;
 
 
-        //actuallymove(m, best);
+        actuallymove(m, best);
     }
 
     public Move FindBestMove(Model m) 
@@ -127,22 +144,38 @@ public class AI
     }
 
     // Will call findbestmove, make moves and undo them
-    public void RecursionMove(Model m, int depth, Move current)
+    public Move RecursionMove(Model m, int depth, Move current)
     {
         Move best = FindBestMove(m);
-        int start = current.pieceToMove.position.x + current.pieceToMove.position.y * 8 - 1;
-        int end = current.moveto.x + current.moveto.y * 8 - 1;
+        bool nowplayer = player;
+        int start = best.pieceToMove.position.x + best.pieceToMove.position.y * 8 - 1;
+        int end = best.moveto.x + best.moveto.y * 8 - 1;
         m.board.MakeMove(start, end, player);
-
         // add method to change the list of pieces
-        
+        m.ChangePiecePosition(best.pieceToMove.position, best.moveto, nowplayer);
+
+
         player = !player;
         if (depth == 0)
         {
-            return;
+            current.score += addscore(best.score, nowplayer);
+            return current;
         }
-        RecursionMove(m, depth - 1, best);
-        return;
+        Move two = RecursionMove(m, depth - 1, best);
+        current.score += addscore(two.score, nowplayer);
+        return current;
+    }
+
+    private int addscore(int score, bool nowplayer) 
+    {
+        if (nowplayer)
+        {
+            return -score;
+        }
+        else 
+        {
+            return score;
+        }
     }
 
     // get vector for position and check of its legit for moves

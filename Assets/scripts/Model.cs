@@ -129,5 +129,16 @@ public class Model
     {
         return (x < 8 && x >= 0) && (y < 8 && y >= 0);
     }
+
+    public void ChangePiecePosition(Vector2Int before, Vector2Int after, bool player) 
+    {
+        foreach (Piece p in GetPiecesByBool(player)) 
+        {
+            if (p.position == before) 
+            {
+                p.position = after;
+            }
+        }
+    }
 }
 
