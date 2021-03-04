@@ -161,8 +161,7 @@ public class Model
         {
             GetPiecesByBool(!move.pieceToMove.player).Add(new Piece(move.moveto, !move.pieceToMove.player));
         }
-        board.MakeMove(move.pieceToMove.position, move.moveto, move.pieceToMove.player);
-        
+        board.undomove(move.pieceToMove.position, move.moveto, move.pieceToMove.player, move.attack);
     }
 
 }

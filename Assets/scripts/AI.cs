@@ -13,10 +13,11 @@ public class AI
     GameObject controller = GameObject.FindGameObjectWithTag("GameController");
     BitBoard b;
     bool player = false;
-    int searchdepth = 0;
+    int searchdepth = 2;
     // Copy a model to a second model
     public void CopyModel(Model m, Model copy)
     {
+        copy.InitModel();
         foreach (Piece p in m.whites)
         {
             copy.whites.Add(new Piece(p.position, p.player));
@@ -25,9 +26,11 @@ public class AI
         {
             copy.blacks.Add(new Piece(p.position, p.player));
         }
-        copy.board = m.board; }
+        m.board.copyboard(copy.board); 
+    }
 
     // Ai is always black
+    // make this better - dont have to count all pieces since each turn only 1 moves (6 lines change)
     public void GetPossibleMoves(Vector2Int dir, Vector2Int now, Move m, Model model)
     {
         Vector2Int pos = now;
@@ -132,7 +135,7 @@ public class AI
         {
             score -= 5;
         }
-        if ((move.moveto.x == 4 || move.moveto.y == 5) && (move.moveto.y == 4 || move.moveto.y == 5))
+        if ((move.moveto.x == 4 && move.moveto.y == 3) || (move.moveto.y == 4 && move.moveto.x == 3))
         {
             score += 6;
         }
@@ -145,12 +148,13 @@ public class AI
 
     public void actuallymove(Model m, Move move)
     {
-        Vector2Int before = new Vector2Int(move.pieceToMove.piece.GetComponent<LOAman>().GetXBoard(),
-            move.pieceToMove.piece.GetComponent<LOAman>().GetYBoard());
+        Piece p = m.GetPieceByIndex(move.pieceToMove.position.x, move.pieceToMove.position.y);
+        //Vector2Int before = new Vector2Int(p.piece.GetComponent<LOAman>().GetXBoard(),
+        //    p.piece.GetComponent<LOAman>().GetYBoard());
+        Vector2Int before = p.position;
         controller = GameObject.FindGameObjectWithTag("GameController");
         Piece BeforePiece = m.GetPieceByIndex(before.x, before.y);
         Piece piece = m.GetPieceByIndex(move.moveto.x, move.moveto.y);
-        int old = before.x + 8 * before.y - 1;
         if (piece != null)
         {
             // white piece
@@ -200,7 +204,7 @@ public class AI
         return best;
     }
 
-    public int RecursionMove(Model m, int depth, Move current)
+    public int RecursionMove(Model m, int depth, Move current, int alpha, int beta)
     {
         if (depth == searchdepth)
         {
@@ -208,12 +212,10 @@ public class AI
         }
         // Make a move on the model - change bitboard and lists
         m.ChangePiecePosition(current);
-        m.board.MakeMove(current.pieceToMove.position, current.moveto, player);
         player = !player;
-        int score;
-        int bestscore = player ? int.MaxValue : int.MinValue;
         Move nextmove = new Move();
-        List<Piece> indexer = m.GetPiecesByBool(player);
+        List<Piece> indexer=new List<Piece>();
+        indexer.AddRange(m.GetPiecesByBool(player));
         for (int i = 0; i < indexer.Count; i++)
         {
             Piece p = indexer[i];
@@ -221,44 +223,56 @@ public class AI
             getAllDirections(p.position, nextmove, m);
             foreach (Move after in nextmove.Child)
             {
-                score = RecursionMove(m, depth + 1, after);
+
                 if (player)
                 {
-                    if (bestscore > score)
+                    beta = min(beta, RecursionMove(m, depth + 1, after, alpha, beta));
+                    if (beta <= alpha)
                     {
-                        bestscore = score;
+                        return beta;
                     }
                 }
                 else 
                 {
-                    if (bestscore < score)
+                    alpha = max(alpha, RecursionMove(m, depth + 1, after, alpha, beta));
+
+                    if (alpha >= beta)
                     {
-                        bestscore = score;
+                        return alpha;
                     }
                 }
                 m.UndoChangePosition(current);
-                m.board.MakeMove(current.moveto, current.pieceToMove.position, player);
             }
         }
-        return bestscore;
+        return player ? beta : alpha;
     }
 
+    public int min(int a, int b) 
+    {
+        return a > b ? b : a;
+    }
+
+    public int max(int a, int b)
+    {
+        return a < b ? b : a;
+    }
     public void aimove(Model m)
     {
         Model temp = new Model();
-        temp.InitModel();
         CopyModel(m, temp);
         Move move = new Move();
         Move bestmove = new Move();
         bestmove.score = int.MinValue;
         int current = int.MinValue;
-        foreach (Piece p in temp.GetPiecesByBool(false)) 
+        int counter = 0;
+        foreach (Piece p in m.GetPiecesByBool(false)) 
         {
             move.pieceToMove = p;
             getAllDirections(p.position, move, m);
+            counter += 1;
             foreach (Move nextmove in move.Child) 
             {
-                current = RecursionMove(temp, 0, nextmove);
+                current = RecursionMove(temp, 0, nextmove, int.MinValue, int.MaxValue);
                 if (bestmove.score < current) 
                 {
                     bestmove = nextmove;
@@ -266,6 +280,7 @@ public class AI
                 }
             }
             move.Child = new List<Move>();
+            CopyModel(m, temp);
         }
         actuallymove(m, bestmove);
     }

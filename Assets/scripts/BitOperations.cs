@@ -135,13 +135,13 @@ public class BitBoard
         int after = PositionToIndex(end);
         if (player)
         {
-            whites |= TurnIndexToBitBoard(before);
-            whites ^= TurnIndexToBitBoard(after);
+            whites |= TurnIndexToBitBoard(after);
+            whites ^= TurnIndexToBitBoard(before);
         }
         else
         {
-            blacks |= TurnIndexToBitBoard(before);
-            blacks ^= TurnIndexToBitBoard(after);
+            blacks |= TurnIndexToBitBoard(after);
+            blacks ^= TurnIndexToBitBoard(before);
         }
         if (IsEnemy(end ,player)) 
         {
@@ -150,9 +150,36 @@ public class BitBoard
         board = whites | blacks;
     }
 
-    public void undomove() 
+    public void copyboard(BitBoard b) 
     {
-        
+        b.blacks = blacks;
+        b.whites = whites;
+        b.board = board;
+    }
+    public void undomove(Vector2Int start, Vector2Int end, bool player, bool attack) 
+    {
+        int before = PositionToIndex(start);
+        int after = PositionToIndex(end);
+        if (player)
+        {
+            whites |= TurnIndexToBitBoard(after);
+            whites ^= TurnIndexToBitBoard(before);
+            if (attack)
+            {
+                blacks |= TurnIndexToBitBoard(after);
+            }
+        }
+        else
+        {
+            blacks |= TurnIndexToBitBoard(after);
+            blacks ^= TurnIndexToBitBoard(before);
+            if (attack)
+            {
+                whites |= TurnIndexToBitBoard(after);
+            }
+        }
+
+        board = whites | blacks;
     }
     // Get a bool and return that players bitboard for his pieces
     public long GetCurrentPlayersBoard(bool player)
