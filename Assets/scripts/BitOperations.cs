@@ -69,6 +69,18 @@ public class BitBoard
         }
     }
 
+    public void SetPlayersBoard(int eat, bool player) 
+    {
+        if (player)
+        {
+            blacks ^= TurnIndexToBitBoard(eat);
+        }
+        else 
+        {
+            whites ^= TurnIndexToBitBoard(eat);
+        }
+    }
+
     public Vector2Int[] GetDirections()
     {
         return directions;
@@ -117,18 +129,30 @@ public class BitBoard
     }
 
     // Get a starting index, an end index and the player making a move, remove the bit at the start index and add a bit at the end index
-    public void MakeMove(int start, int end, bool player)
+    public void MakeMove(Vector2Int start, Vector2Int end, bool player)
     {
+        int before = PositionToIndex(start);
+        int after = PositionToIndex(end);
         if (player)
         {
-            whites |= TurnIndexToBitBoard(end);
-            whites ^= TurnIndexToBitBoard(start);
+            whites |= TurnIndexToBitBoard(before);
+            whites ^= TurnIndexToBitBoard(after);
         }
         else
         {
-            blacks |= TurnIndexToBitBoard(end);
-            blacks ^= TurnIndexToBitBoard(start);
+            blacks |= TurnIndexToBitBoard(before);
+            blacks ^= TurnIndexToBitBoard(after);
         }
+        if (IsEnemy(end ,player)) 
+        {
+            SetPlayersBoard(after, player);
+        }
+        board = whites | blacks;
+    }
+
+    public void undomove() 
+    {
+        
     }
     // Get a bool and return that players bitboard for his pieces
     public long GetCurrentPlayersBoard(bool player)
@@ -169,5 +193,10 @@ public class BitBoard
     public bool IsWhitePiece(int x, int y)
     {
         return (whites & TurnIndexToBitBoard(x + y * 8 - 1)) != 0;
+    }
+
+    public int PositionToIndex(Vector2Int pos) 
+    {
+        return pos.x + pos.y * 8 - 1;
     }
 }

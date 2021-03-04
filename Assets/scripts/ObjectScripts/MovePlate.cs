@@ -34,7 +34,7 @@ public class MovePlate : MonoBehaviour
         if (attack) 
         {
             model.RemovePiece(piece);
-            model.board.MakeMove(matrixX + matrixY * 8 - 1, matrixX + matrixY * 8 - 1, !controller.GetComponent<Game>().GetCurrentPlayer());
+            model.board.MakeMove(after, after, !controller.GetComponent<Game>().GetCurrentPlayer());
             Destroy(piece.piece);
         }
 
@@ -43,7 +43,7 @@ public class MovePlate : MonoBehaviour
         reference.GetComponent<LOAman>().SetCorods();
         model.UpdatePosition(BeforePiece, after);
         reference.GetComponent<LOAman>().DestroyMovePlates();
-        model.board.MakeMove(old, matrixX + matrixY * 8 - 1, controller.GetComponent<Game>().GetCurrentPlayer());
+        model.board.MakeMove(before, after, controller.GetComponent<Game>().GetCurrentPlayer());
         model.board.SetBitBoard(model.board.GetWhites() | model.board.GetBlacks());
         if (model.checkwin(controller.GetComponent<Game>().GetCurrentPlayer()))
         {

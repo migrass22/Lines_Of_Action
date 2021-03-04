@@ -10,7 +10,7 @@ public class Model
     public List<Piece> blacks { get; set; }
     // BitBoard object to do all logical actions
     public BitBoard board { get; set; }
-
+    
     // Ctor for the model, will also be used to restart the game
     public void InitModel() 
     {
@@ -130,15 +130,40 @@ public class Model
         return (x < 8 && x >= 0) && (y < 8 && y >= 0);
     }
 
-    public void ChangePiecePosition(Vector2Int before, Vector2Int after, bool player) 
+    public void ChangePiecePosition(Move move) 
     {
-        foreach (Piece p in GetPiecesByBool(player)) 
+        foreach (Piece p in GetPiecesByBool(move.pieceToMove.player))
         {
-            if (p.position == before) 
+            if (p == move.pieceToMove) 
             {
-                p.position = after;
+                p.position = move.moveto;
+                break;
             }
         }
+        if (move.attack) 
+        {
+            GetPiecesByBool(!move.pieceToMove.player).Remove(GetPieceByIndex(move.moveto.x, move.moveto.y));
+        }
+        board.MakeMove(move.pieceToMove.position, move.moveto, move.pieceToMove.player);
     }
+
+    public void UndoChangePosition(Move move) 
+    {
+        foreach (Piece p in GetPiecesByBool(move.pieceToMove.player))
+        {
+            if (p == move.pieceToMove)
+            {
+                p.position = move.moveto;
+                break;
+            }
+        }
+        if (move.attack)
+        {
+            GetPiecesByBool(!move.pieceToMove.player).Add(new Piece(move.moveto, !move.pieceToMove.player));
+        }
+        board.MakeMove(move.pieceToMove.position, move.moveto, move.pieceToMove.player);
+        
+    }
+
 }
 

@@ -12,34 +12,27 @@ public class AI
     // Figure out how to save moves
     GameObject controller = GameObject.FindGameObjectWithTag("GameController");
     BitBoard b;
-    Model temp;
-    List<Piece> possiblemove = new List<Piece>();
     bool player = false;
-
-    public Model CopyModel(Model m) 
+    int searchdepth = 0;
+    // Copy a model to a second model
+    public void CopyModel(Model m, Model copy)
     {
-        Model mnew = new Model();
-        mnew.InitModel();
-        foreach (Piece p in m.whites) 
+        foreach (Piece p in m.whites)
         {
-            mnew.whites.Add(new Piece(p.position, p.player));
+            copy.whites.Add(new Piece(p.position, p.player));
         }
         foreach (Piece p in m.blacks)
         {
-            mnew.blacks.Add(new Piece(p.position, p.player));
+            copy.blacks.Add(new Piece(p.position, p.player));
         }
-        mnew.board = m.board;
-        return mnew;
-    }
-
+        copy.board = m.board; }
 
     // Ai is always black
-    public void GetPossibleMoves(Vector2Int dir, Vector2Int now) 
+    public void GetPossibleMoves(Vector2Int dir, Vector2Int now, Move m, Model model)
     {
         Vector2Int pos = now;
         pos.x += dir.x;
         pos.y += dir.y;
-        Model model = temp;
         b = model.board;
         Vector2Int anti = new Vector2Int(now.x - dir.x, now.y - dir.y);
         Vector2Int normalenemy = new Vector2Int(8, 8);
@@ -75,107 +68,40 @@ public class AI
             anti.x -= dir.x;
             anti.y -= dir.y;
         }
-        CreatePossiblesBoard(model, new Vector2Int(now.x + (counter * dir.x), now.y + (counter * dir.y)), normalenemy, flag1, now);
-        CreatePossiblesBoard(model, new Vector2Int(now.x + (counter * -dir.x), now.y + (counter * -dir.y)), antienemy, flag2, now);
+        CreatePossiblesBoard(model, new Vector2Int(now.x + (counter * dir.x), now.y + (counter * dir.y)), normalenemy, flag1, now, m);
+        CreatePossiblesBoard(model, new Vector2Int(now.x + (counter * -dir.x), now.y + (counter * -dir.y)), antienemy, flag2, now, m);
     }
 
-    private bool IsBefore(Vector2Int now,int x, int y, int enemyx, int enemyy)
+    private bool IsBefore(Vector2Int now, int x, int y, int enemyx, int enemyy)
     {
         int dist1x = x - now.x, dist2x = enemyx - now.x, dist1y = y - now.y, dist2y = enemyy - now.y;
         return Math.Abs(dist1x) <= Math.Abs(dist2x) && Math.Abs(dist1y) <= Math.Abs(dist2y);
     }
-    public void CreatePossiblesBoard(Model m, Vector2Int pos, Vector2Int enemy, bool flag,Vector2Int p) 
+
+    // Add possible moves to somewhere
+    public void CreatePossiblesBoard(Model m, Vector2Int pos, Vector2Int enemy, bool flag, Vector2Int p, Move move)
     {
 
         if (m.IsOnBoard(pos.x, pos.y) && (IsBefore(p, pos.x, pos.y, enemy.x, enemy.y) || flag))
         {
             if (!m.board.IsPieceHere(pos.x, pos.y))
             {
-                possiblemove.Add(new Piece(pos, false));
+                move.Child.Add(new Move(move.pieceToMove, pos, 0, false));
             }
             else if (m.board.IsEnemy(pos, player))
             {
-                possiblemove.Add(new Piece(pos, true));
+                move.Child.Add(new Move(move.pieceToMove, pos, 0, true));
             }
         }
     }
 
-    public void getAllDirections(Vector2Int now)
+    public void getAllDirections(Vector2Int now, Move m, Model model)
     {
         // Initiate all directions according to amound of pieces in the direction
-        GetPossibleMoves(new Vector2Int(1, 0), now);
-        GetPossibleMoves(new Vector2Int(0, 1), now);
-        GetPossibleMoves(new Vector2Int(1, 1), now);
-        GetPossibleMoves(new Vector2Int(-1, 1), now);
-    }
-
-    public void MakeMove(Model m) 
-    {
-        // Copy everything from the given model to the temporary one
-        temp = CopyModel(m);
-
-        Move best = RecursionMove(temp, 2, new Move()) ;
-
-
-        actuallymove(m, best);
-    }
-
-    public Move FindBestMove(Model m) 
-    {
-        int max = -1000, temp;
-        Piece bestPiece = null;
-        Piece move = null;
-        foreach (Piece p in m.GetPiecesByBool(player)) 
-        {
-            getAllDirections(p.position);
-            foreach (Piece pos in possiblemove)
-            {
-                temp = evaluate(b, p.position, pos.position, pos.player, m);
-                if (temp > max)
-                {
-                    max = temp;
-                    bestPiece = p;
-                    move = pos;
-                }
-            }
-            possiblemove = new List<Piece>();
-        }
-        return new Move(bestPiece, move.position, max, move.player);
-    }
-
-    // Will call findbestmove, make moves and undo them
-    public Move RecursionMove(Model m, int depth, Move current)
-    {
-        Move best = FindBestMove(m);
-        bool nowplayer = player;
-        int start = best.pieceToMove.position.x + best.pieceToMove.position.y * 8 - 1;
-        int end = best.moveto.x + best.moveto.y * 8 - 1;
-        m.board.MakeMove(start, end, player);
-        // add method to change the list of pieces
-        m.ChangePiecePosition(best.pieceToMove.position, best.moveto, nowplayer);
-
-
-        player = !player;
-        if (depth == 0)
-        {
-            current.score += addscore(best.score, nowplayer);
-            return current;
-        }
-        Move two = RecursionMove(m, depth - 1, best);
-        current.score += addscore(two.score, nowplayer);
-        return current;
-    }
-
-    private int addscore(int score, bool nowplayer) 
-    {
-        if (nowplayer)
-        {
-            return -score;
-        }
-        else 
-        {
-            return score;
-        }
+        GetPossibleMoves(new Vector2Int(1, 0), now, m, model);
+        GetPossibleMoves(new Vector2Int(0, 1), now, m, model);
+        GetPossibleMoves(new Vector2Int(1, 1), now, m, model);
+        GetPossibleMoves(new Vector2Int(-1, 1), now, m, model);
     }
 
     // get vector for position and check of its legit for moves
@@ -191,10 +117,10 @@ public class AI
         return false;
     }
 
-    public int evaluate(BitBoard b,Vector2Int before, Vector2Int move, bool attack, Model m) 
+    public int evaluate(Move move, Model m)
     {
         int score = 0;
-        if (attack) 
+        if (move.attack)
         {
             score += 4;
         }
@@ -202,24 +128,24 @@ public class AI
         {
             score += 5;
         }
-        else 
+        else
         {
             score -= 5;
         }
-        if ((move.x == 4 || move.y == 5) && (move.y == 4 || move.y == 5))
+        if ((move.moveto.x == 4 || move.moveto.y == 5) && (move.moveto.y == 4 || move.moveto.y == 5))
         {
             score += 6;
         }
-        else if(move.x == 0 || move.y == 0)
+        else if (move.moveto.x == 0 || move.moveto.y == 0)
         {
             score -= 4;
         }
         return score;
     }
 
-    public void actuallymove(Model m, Move move) 
+    public void actuallymove(Model m, Move move)
     {
-        Vector2Int before = new Vector2Int(move.pieceToMove.piece.GetComponent<LOAman>().GetXBoard(), 
+        Vector2Int before = new Vector2Int(move.pieceToMove.piece.GetComponent<LOAman>().GetXBoard(),
             move.pieceToMove.piece.GetComponent<LOAman>().GetYBoard());
         controller = GameObject.FindGameObjectWithTag("GameController");
         Piece BeforePiece = m.GetPieceByIndex(before.x, before.y);
@@ -228,10 +154,10 @@ public class AI
         if (piece != null)
         {
             // white piece
-            if (piece.player) 
+            if (piece.player)
             {
                 m.RemovePiece(piece);
-                m.board.MakeMove(piece.position.x + piece.position.y * 8 - 1, piece.position.x + piece.position.y * 8 - 1, !controller.GetComponent<Game>().GetCurrentPlayer());
+                m.board.MakeMove(piece.position, piece.position, !controller.GetComponent<Game>().GetCurrentPlayer());
                 GameObject.Destroy(piece.piece);
             }
         }
@@ -241,8 +167,7 @@ public class AI
         BeforePiece.piece.GetComponent<LOAman>().SetCorods();
         m.UpdatePosition(BeforePiece, move.moveto);
         BeforePiece.piece.GetComponent<LOAman>().DestroyMovePlates();
-        m.board.MakeMove(old, move.moveto.x + move.moveto.y * 8 - 1, controller.GetComponent<Game>().GetCurrentPlayer());
-        m.board.SetBitBoard(m.board.GetWhites() | m.board.GetBlacks());
+        m.board.MakeMove(before, move.moveto, controller.GetComponent<Game>().GetCurrentPlayer());
         if (m.checkwin(controller.GetComponent<Game>().GetCurrentPlayer()))
         {
             controller.GetComponent<Game>().Winner(controller.GetComponent<Game>().GetCurrentPlayer());
@@ -256,4 +181,94 @@ public class AI
 
         }
     }
+
+    // Given a move, find the best move in it (child list)
+    public Move FindBestMove(Move somehthing, Model model)
+    {
+        int max = -1000;
+        int score = 0;
+        Move best = new Move();
+        foreach (Move m in somehthing.Child)
+        {
+            score = evaluate(m, model);
+            if (score > max)
+            {
+                best = m;
+                best.score = max;
+            }
+        }
+        return best;
+    }
+
+    public int RecursionMove(Model m, int depth, Move current)
+    {
+        if (depth == searchdepth)
+        {
+            return evaluate(current, m);
+        }
+        // Make a move on the model - change bitboard and lists
+        m.ChangePiecePosition(current);
+        m.board.MakeMove(current.pieceToMove.position, current.moveto, player);
+        player = !player;
+        int score;
+        int bestscore = player ? int.MaxValue : int.MinValue;
+        Move nextmove = new Move();
+        List<Piece> indexer = m.GetPiecesByBool(player);
+        for (int i = 0; i < indexer.Count; i++)
+        {
+            Piece p = indexer[i];
+            nextmove.pieceToMove = p;
+            getAllDirections(p.position, nextmove, m);
+            foreach (Move after in nextmove.Child)
+            {
+                score = RecursionMove(m, depth + 1, after);
+                if (player)
+                {
+                    if (bestscore > score)
+                    {
+                        bestscore = score;
+                    }
+                }
+                else 
+                {
+                    if (bestscore < score)
+                    {
+                        bestscore = score;
+                    }
+                }
+                m.UndoChangePosition(current);
+                m.board.MakeMove(current.moveto, current.pieceToMove.position, player);
+            }
+        }
+        return bestscore;
+    }
+
+    public void aimove(Model m)
+    {
+        Model temp = new Model();
+        temp.InitModel();
+        CopyModel(m, temp);
+        Move move = new Move();
+        Move bestmove = new Move();
+        bestmove.score = int.MinValue;
+        int current = int.MinValue;
+        foreach (Piece p in temp.GetPiecesByBool(false)) 
+        {
+            move.pieceToMove = p;
+            getAllDirections(p.position, move, m);
+            foreach (Move nextmove in move.Child) 
+            {
+                current = RecursionMove(temp, 0, nextmove);
+                if (bestmove.score < current) 
+                {
+                    bestmove = nextmove;
+                    bestmove.score = current;
+                }
+            }
+            move.Child = new List<Move>();
+        }
+        actuallymove(m, bestmove);
+    }
+
+
 }

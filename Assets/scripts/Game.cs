@@ -103,7 +103,7 @@ public class Game : MonoBehaviour
         if (!currentplayer)
         {
             AI ai = new AI();
-            ai.MakeMove(model);
+            ai.aimove(model);
         }
 
         // Update the turn counter

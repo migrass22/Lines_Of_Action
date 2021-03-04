@@ -14,6 +14,8 @@ public class Move
     // State of move, is it attacking something or not
     public bool attack { get; set; }
 
+    public List<Move> Child { get; set; }
+
     // Ctor
     public Move(Piece pieceToMove, Vector2Int moveto, int score, bool attack)
     {
@@ -21,6 +23,7 @@ public class Move
         this.pieceToMove = pieceToMove;
         this.score = score;
         this.attack = attack;
+        this.Child = new List<Move>(8);
     }
     public Move() 
     {
@@ -28,6 +31,7 @@ public class Move
         this.pieceToMove = null;
         this.score = 0;
         this.attack = false;
+        this.Child = new List<Move>(8);
     }
 
 }
