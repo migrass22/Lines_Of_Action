@@ -13,7 +13,7 @@ public class AI
     GameObject controller = GameObject.FindGameObjectWithTag("GameController");
     BitBoard b;
     bool player = false;
-    int searchdepth = 2;
+    int searchdepth = 3;
     // Copy a model to a second model
     public void CopyModel(Model m, Model copy)
     {
@@ -143,6 +143,14 @@ public class AI
         {
             score -= 4;
         }
+        if (m.checkwin(false))
+        {
+            score += int.MaxValue;
+        }
+        else 
+        {
+            score += int.MinValue;
+        }
         return score;
     }
 
@@ -220,6 +228,7 @@ public class AI
         {
             Piece p = indexer[i];
             nextmove.pieceToMove = p;
+            nextmove.Child = new List<Move>();
             getAllDirections(p.position, nextmove, m);
             foreach (Move after in nextmove.Child)
             {
