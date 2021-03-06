@@ -14,6 +14,17 @@ public class AI
     BitBoard b;
     bool player = false;
     int searchdepth = 3;
+    // Create 4 arrays for each line possible to move in, u need 2 more functions to change each array 
+    // when move is made and when move is undone
+    int[] row = { 6, 0, 0, 0, 0, 0, 0, 6 };
+
+    int[] col = { 6, 0, 0, 0, 0, 0, 0, 6 };
+
+    // Primary diagonal
+    int[] pdiagonal = { 0, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 0 };
+    // Secondary diagonal
+    int[] sdiagonal = { 0, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 0 };
+
     // Copy a model to a second model
     public void CopyModel(Model m, Model copy)
     {
@@ -27,6 +38,27 @@ public class AI
             copy.blacks.Add(new Piece(p.position, p.player));
         }
         m.board.copyboard(copy.board); 
+    }
+
+    // Trying to improve the move generation
+    // method to change amount of pieces in move arrays
+    public void ChangeArrayNumbers(Vector2Int start, Vector2Int end) 
+    {
+
+
+    }
+
+    // Get a piece and return where it can go to using move arrays
+    public void PossibleMoves2(Piece p) 
+    {
+        // y position is amount of pieces in this num of col
+        // x position is number of pieces in this num of row
+        int colmove = col[p.position.y];
+        int rowmove = row[p.position.x];
+        int pdig = p.position.x - p.position.y;
+       // pdig = pdig < 0 ? 
+
+
     }
 
     // Ai is always black
