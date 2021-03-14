@@ -199,15 +199,42 @@ public class BitBoard
         return blacks;
     }
 
+
+    // Get a starting position, an end position and who is the current player
+    // Check if an enemy is present between these 2 points
+    public bool IsEnemyBeforeHere(Vector2Int start, Vector2Int end, Vector2Int dir, bool player) 
+    {
+        // Mask to hold the 2 points im checking between
+        long mask = 0;
+
+        // Maybe Change this later since u want efficent shit
+        // Currently this is O(6)
+        // Add bits and check after with single if statement
+        while(start.x != end.x && start.y != end.y)
+        {
+            start.x += dir.x;
+            start.y += dir.y;
+            mask |= TurnIndexToBitBoard(PositionToIndex(start));
+        }
+        // Mask holds "on" bits between the 2 positions given
+        // if & operation with the black mask returns 0 it means nothing is between these 2 bits - this means no enemy here
+        if ((blacks & mask) == 0) 
+        {
+            return false;
+        }
+        // Enemy is present return true 
+        return true;
+    }
+    // Return a board of the empty positions in the board
     public long GetEmptyPositions()
     {
         return (board ^ 1) & 0;
     }
 
     // Check if a given index is holding anykind of piece
-    public bool IsPieceHere(int x, int y)
+    public bool IsPieceHere(Vector2Int v)
     {
-        return (board & TurnIndexToBitBoard(x + y * 8 - 1)) != 0;
+        return (board & TurnIndexToBitBoard(PositionToIndex(v))) != 0;
     }
 
     // Check if a given index is holding a black piece

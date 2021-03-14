@@ -25,6 +25,11 @@ public class Move
         this.attack = attack;
         this.Child = new List<Move>(8);
     }
+    public Move(Vector2Int moveto, bool attack)
+    {
+        this.moveto = moveto;
+        this.attack = attack;
+    }
     public Move() 
     {
         this.moveto = new Vector2Int(0, 0);

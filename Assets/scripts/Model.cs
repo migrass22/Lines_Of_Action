@@ -10,7 +10,19 @@ public class Model
     public List<Piece> blacks { get; set; }
     // BitBoard object to do all logical actions
     public BitBoard board { get; set; }
-    
+
+    // Create 4 arrays for each line possible to move in, u need 2 more functions to change each array 
+    // when move is made and when move is undone
+    public int[] row = { 6, 2, 2, 2, 2, 2, 2, 6 };
+
+    public int[] col = { 6, 0, 0, 0, 0, 0, 0, 6 };
+
+    // Primary diagonal
+    public int[] pdiagonal = { 0, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 0 };
+
+    // Secondary diagonal
+    public int[] sdiagonal = { 0, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 0 };
+
     // Ctor for the model, will also be used to restart the game
     public void InitModel() 
     {
@@ -163,6 +175,5 @@ public class Model
         }
         board.undomove(move.pieceToMove.position, move.moveto, move.pieceToMove.player, move.attack);
     }
-
 }
 

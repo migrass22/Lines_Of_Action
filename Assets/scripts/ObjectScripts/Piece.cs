@@ -9,6 +9,10 @@ public class Piece
     public Vector2Int position { get; set; }
     public bool player { get; set; }
 
+    public Move[] possibles = new Move[8];
+
+    public int amountOfMoves = 0;
+
     public Piece(GameObject InGamePiece, Vector2Int position, bool player) 
     {
         // The actual gamepiece in unity
