@@ -108,6 +108,7 @@ public class BitBoard
     {
         this.board = newboard;
     }
+
     public void SetCheckedThis(long setchecked)
     {
         this.checkedthis = setchecked;
@@ -156,6 +157,7 @@ public class BitBoard
         b.whites = whites;
         b.board = board;
     }
+
     public void undomove(Vector2Int start, Vector2Int end, bool player, bool attack) 
     {
         int before = PositionToIndex(start);
@@ -181,6 +183,7 @@ public class BitBoard
 
         board = whites | blacks;
     }
+
     // Get a bool and return that players bitboard for his pieces
     public long GetCurrentPlayersBoard(bool player)
     {
@@ -210,21 +213,29 @@ public class BitBoard
         // Maybe Change this later since u want efficent shit
         // Currently this is O(6)
         // Add bits and check after with single if statement
-        while(start.x != end.x && start.y != end.y)
+        while(start != end && IsOnBoard(start.x, start.y))
         {
             start.x += dir.x;
             start.y += dir.y;
             mask |= TurnIndexToBitBoard(PositionToIndex(start));
         }
+        mask ^= TurnIndexToBitBoard(PositionToIndex(start));
+        // Get the oponnents board
         // Mask holds "on" bits between the 2 positions given
         // if & operation with the black mask returns 0 it means nothing is between these 2 bits - this means no enemy here
-        if ((blacks & mask) == 0) 
+        if ((GetCurrentPlayersBoard(!player) & mask) == 0) 
         {
             return false;
         }
         // Enemy is present return true 
         return true;
     }
+
+    public bool IsOnBoard(int x, int y)
+    {
+        return (x < 8 && x >= 0) && (y < 8 && y >= 0);
+    }
+
     // Return a board of the empty positions in the board
     public long GetEmptyPositions()
     {

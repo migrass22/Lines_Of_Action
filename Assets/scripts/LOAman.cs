@@ -81,16 +81,17 @@ public class LOAman : MonoBehaviour
             controller.GetComponent<Game>().CleanUp();
             controller.GetComponent<Game>().InitializeGame();
         }
-        if (player)
+        // If this is the current players piece and we dont use ai then continue
+        if (player == controller.GetComponent<Game>().GetCurrentPlayer())
         {
             // Change here the move generation
             //DestroyMovePlates();
             //InitMovePlates();
             DestroyMovePlates();
-            PossibleMovesImproved();
-            foreach(Move m in p.possibles)
+            m.PossibleMovesImproved(p);
+            for (int i = 0; p.possibles[i] != null ; i++)
             {
-                MovePlateSpawn(m);
+                MovePlateSpawn(p.possibles[i]);
             }
         }
     }
@@ -198,139 +199,68 @@ public class LOAman : MonoBehaviour
     }
 
 
-    // Method to change amount of pieces in move arrays
-    // After a move is made
-    public void UpdateArrayNumbers(Vector2Int start, Vector2Int end, Vector2Int dir, bool attack)
-    {
-        // Reapet everything below this for every other direction
-        // Check if the move was made in a row
-        if (dir == new Vector2Int(1, 0) || dir == new Vector2Int(-1, 0))
-        {
-            if (attack)
-            {
-                // Only if a piece was eaten then the amount of pieces goes down
-                m.row[end.y]--;
-            }
-            // Change every array if the direction is a row
-            m.col[start.x]--;
-            m.col[end.x]++;
+    //// Get a piece and return where it can go to using move arrays
+    //public void PossibleMovesImproved()
+    //{
+    //    if (p.amountOfMoves == 0)
+    //    {
+    //        // y position is amount of pieces in this num of col
+    //        // x position is number of pieces in this num of row
+    //        int colmove = m.col[p.position.x];
+    //        int rowmove = m.row[p.position.y];
+    //        // Turn a position to the index of correct diagonal
+    //        int pdiagmove = m.pdiagonal[p.position.x - p.position.y + 7];
+    //        int sdiagmove = m.sdiagonal[p.position.y + p.position.x];
 
-            m.pdiagonal[start.x - start.y + 7]--;
-            m.pdiagonal[end.x - end.y + 7]++;
+    //        // Check for col moves of piece
+    //        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y + colmove), new Vector2Int(0, 1));
+    //        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y - colmove), new Vector2Int(0, -1));
 
-            m.sdiagonal[start.y - start.x + 7]--;
-            m.sdiagonal[end.y - end.x + 7]++;
-        }
-        // Check if the move is made in a col
-        else if (dir == new Vector2Int(0, -1) || dir == new Vector2Int(0, 1))
-        {
-            if (attack)
-            {
-                m.col[end.x]--;
-            }
+    //        // Check for row moves of piece
+    //        OneLineMoves(p, new Vector2Int(p.position.x + rowmove, p.position.y), new Vector2Int(1, 0));
+    //        OneLineMoves(p, new Vector2Int(p.position.x - rowmove, p.position.y), new Vector2Int(-1, 0));
 
-            m.row[start.y]--;
-            m.row[end.y]++;
+    //        // Check for the primary diagonal of the piece
+    //        OneLineMoves(p, new Vector2Int(p.position.x + pdiagmove, p.position.y + pdiagmove), new Vector2Int(1, 1));
+    //        OneLineMoves(p, new Vector2Int(p.position.x - pdiagmove, p.position.y - pdiagmove), new Vector2Int(-1, -1));
 
-            m.pdiagonal[start.x - start.y + 7]--;
-            m.pdiagonal[end.x - end.y + 7]++;
+    //        // Check for the secondery diagonal of the piece
+    //        OneLineMoves(p, new Vector2Int(p.position.x + sdiagmove, p.position.y - sdiagmove), new Vector2Int(1, -1));
+    //        OneLineMoves(p, new Vector2Int(p.position.x - sdiagmove, p.position.y + sdiagmove), new Vector2Int(-1, 1));
 
-            m.sdiagonal[start.y - start.x + 7]--;
-            m.sdiagonal[end.y - end.x + 7]++;
-        }
-        // Check if the move is a primary diagonal
-        else if (dir == new Vector2Int(1, 1) || dir == new Vector2Int(-1, -1))
-        {
-            if (attack)
-            {
-                m.pdiagonal[end.x - end.y + 7]--;
-            }
+    //    }
 
-            m.row[start.y]--;
-            m.row[end.y]++;
+    //}
 
-            m.col[start.x]--;
-            m.col[end.x]++;
-
-            m.sdiagonal[start.y - start.x + 7]--;
-            m.sdiagonal[end.y - end.x + 7]++;
-        }
-        // Check if the move is a secondary diagonal 
-        else if (dir == new Vector2Int(1, -1) || dir == new Vector2Int(-1, 1))
-        {
-            if (attack)
-            {
-                m.sdiagonal[end.y - end.x + 7]--;
-            }
-
-            m.row[start.y]--;
-            m.row[end.y]++;
-
-            m.col[start.x]--;
-            m.col[end.x]++;
-
-            m.pdiagonal[start.x - start.y + 7]--;
-            m.pdiagonal[end.x - end.y + 7]++;
-        }
-    }
-
-    // Get a piece and return where it can go to using move arrays
-    public void PossibleMovesImproved()
-    {
-        // y position is amount of pieces in this num of col
-        // x position is number of pieces in this num of row
-        int colmove = m.col[p.position.x];
-        int rowmove = m.row[p.position.y];
-        // Turn a position to the index of correct diagonal
-        int pdiagmove = m.pdiagonal[p.position.x - p.position.y + 7];
-        int sdiagmove = m.sdiagonal[p.position.y - p.position.x + 7];
-
-        // Check for col moves of piece
-        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y + colmove), new Vector2Int(0, 1));
-        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y - colmove), new Vector2Int(0, -1));
-        
-        // Check for row moves of piece
-        OneLineMoves(p, new Vector2Int(p.position.x + rowmove, p.position.y), new Vector2Int(1, 0));
-        OneLineMoves(p, new Vector2Int(p.position.x - rowmove, p.position.y), new Vector2Int(-1, 0));
-
-        // Check for the primary diagonal of the piece
-        OneLineMoves(p, new Vector2Int(p.position.x + pdiagmove, p.position.y + pdiagmove), new Vector2Int(1, 1));
-        OneLineMoves(p, new Vector2Int(p.position.x - pdiagmove, p.position.y - pdiagmove), new Vector2Int(-1, -1));
-
-        // Check for the secondery diagonal of the piece
-        OneLineMoves(p, new Vector2Int(p.position.x + sdiagmove, p.position.y - sdiagmove), new Vector2Int(1, -1));
-        OneLineMoves(p, new Vector2Int(p.position.x - sdiagmove, p.position.y + sdiagmove), new Vector2Int(-1, 1));
-    }
-
-    // Get a piece, an endpoint and a direction
-    // Add a new move to the pieces possible moves if said move is possible
-    public void OneLineMoves(Piece p, Vector2Int endPoint, Vector2Int dir) 
-    {
-        // Check for the column of this piece
-        // End point is on the board?
-        if (m.IsOnBoard(endPoint.x, endPoint.y))
-        {
-            // Are there enemy pieces i jump over?
-            if (!m.board.IsEnemyBeforeHere(p.position, endPoint, dir, player))
-            {
-                // Is there a piece at the end?
-                if (m.board.IsPieceHere(endPoint))
-                {
-                    // Is this piece an enemy Piece?
-                    if (m.board.IsEnemy(p.position, player))
-                    {
-                        // Create a new attack move at this point, save on the piece,
-                        p.possibles[p.amountOfMoves++] = new Move(p, endPoint, 0, true);
-                    }
-                }
-                else
-                {
-                    // No piece at end point -> create a new normal move
-                    p.possibles[p.amountOfMoves++] = new Move(p, endPoint, 0, false);
-                }
-            }
-        }
-    }
+    //// Get a piece, an endpoint and a direction
+    //// Add a new move to the pieces possible moves if said move is possible
+    //public void OneLineMoves(Piece p, Vector2Int endPoint, Vector2Int dir) 
+    //{
+    //    // Check for the column of this piece
+    //    // End point is on the board?
+    //    if (m.IsOnBoard(endPoint.x, endPoint.y))
+    //    {
+    //        // Are there enemy pieces i jump over?
+    //        if (!m.board.IsEnemyBeforeHere(p.position, endPoint, dir, player))
+    //        {
+    //            // Is there a piece at the end?
+    //            if (m.board.IsPieceHere(endPoint))
+    //            {
+    //                // Is this piece an enemy Piece?
+    //                if (m.board.IsEnemy(endPoint, player))
+    //                {
+    //                    // Create a new attack move at this point, save on the piece,
+    //                    p.possibles[p.amountOfMoves++] = new Move(p, endPoint, 0, true);
+    //                }
+    //            }
+    //            else
+    //            {
+    //                // No piece at end point -> create a new normal move
+    //                p.possibles[p.amountOfMoves++] = new Move(p, endPoint, 0, false);
+    //            }
+    //        }
+    //    }
+    //}
 
     // Create the move plate sprites using the positions deemed possible to move to
     private void MovePlateSpawn(Move m)

@@ -13,10 +13,14 @@ public class Game : MonoBehaviour
     private bool currentplayer = true;
     private bool gameover = false;
     public GameObject piece;
+    // Change this to activate ai
+    public bool ActivateAi;
+
     // Start is called before the first frame update
     void Start()
     {
         InitializeGame();
+        ActivateAi = true;
     }
 
     // Restart the db and the pieces to be in the first positions again
@@ -100,7 +104,7 @@ public class Game : MonoBehaviour
         turncounter++;
         // Change player
         currentplayer = !currentplayer;
-        if (!currentplayer)
+        if (!currentplayer && ActivateAi)
         {
             AI ai = new AI();
             ai.aimove(model);

@@ -22,22 +22,30 @@ public class MovePlate : MonoBehaviour
         }
     }
 
+    // Move plate was chosen start to move the piece selected and check if piece should be eaten
     public void OnMouseUp()
     {
+        // Create position before the move and after the move
         Vector2Int before = new Vector2Int(reference.GetComponent<LOAman>().GetXBoard(), reference.GetComponent<LOAman>().GetYBoard());
         Vector2Int after = new Vector2Int(matrixX, matrixY);
+        // Find the controller for the game
         controller = GameObject.FindGameObjectWithTag("GameController");
+        // Get the model
         Model model = controller.GetComponent<Game>().model;
+        // Find the piece im trying to move
         Piece BeforePiece = model.GetPieceByIndex(before.x, before.y);
-        Piece piece = model.GetPieceByIndex(after.x, after.y);
-        int old = before.x + 8 * before.y - 1;
+        // Piece is moved so possible moves should be reset 
+        BeforePiece.possibles = new Move[8];
+        BeforePiece.amountOfMoves = 0;
+        Piece AfterPiece = model.GetPieceByIndex(after.x, after.y);
+        // Check for attack on the piece
         if (attack) 
         {
-            model.RemovePiece(piece);
+            model.RemovePiece(AfterPiece);
             model.board.MakeMove(after, after, !controller.GetComponent<Game>().GetCurrentPlayer());
-            Destroy(piece.piece);
+            Destroy(AfterPiece.piece);
         }
-
+        model.UpdateArrayNumbers(before, after, attack);
         reference.GetComponent<LOAman>().SetXBoard(matrixX);
         reference.GetComponent<LOAman>().SetYBoard(matrixY);
         reference.GetComponent<LOAman>().SetCorods();
@@ -59,6 +67,7 @@ public class MovePlate : MonoBehaviour
         }
 
     }
+
 
     public void SetCoords(int x, int y) 
     {
