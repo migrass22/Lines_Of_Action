@@ -13,7 +13,7 @@ public class AI
     GameObject controller = GameObject.FindGameObjectWithTag("GameController");
     BitBoard b;
     bool player = false;
-    int searchdepth = 3;
+    int searchdepth = 5;
 
     // Copy a model to a second model
     public void CopyModel(Model m, Model copy)
@@ -27,7 +27,8 @@ public class AI
         {
             copy.blacks.Add(new Piece(p.position, p.player));
         }
-        m.board.copyboard(copy.board); 
+        m.board.copyboard(copy.board);
+        copy.CopyNumberArrays(m);
     }
 
     // Ai is always black (for now)
@@ -148,7 +149,7 @@ public class AI
         {
             score += int.MaxValue;
         }
-        else 
+        if(m.checkwin(true))
         {
             score += int.MinValue;
         }
@@ -157,7 +158,9 @@ public class AI
 
     public void actuallymove(Model m, Move move)
     {
-        Piece p = m.GetPieceByIndex(move.pieceToMove.position.x, move.pieceToMove.position.y);
+        Piece p = move.pieceToMove;
+        p.possibles = new Move[8];
+        p.amountOfMoves = 0;
         //Vector2Int before = new Vector2Int(p.piece.GetComponent<LOAman>().GetXBoard(),
         //    p.piece.GetComponent<LOAman>().GetYBoard());
         Vector2Int before = p.position;
@@ -222,17 +225,17 @@ public class AI
         // Make a move on the model - change bitboard and lists
         m.ChangePiecePosition(current);
         player = !player;
+        Move nextmove = new Move();
         //Move nextmove = new Move();
         List<Piece> indexer=new List<Piece>();
         indexer.AddRange(m.GetPiecesByBool(player));
         for (int i = 0; i < indexer.Count; i++)
         {
-            Piece p = indexer[i];
-            Piece temp = p;
-            //nextmove.pieceToMove = p;
-            //nextmove.Child = new List<Move>();
-            FutureMovesImproved(current, m);
-            foreach (Move after in current.Child)
+            nextmove.pieceToMove = indexer[i];
+            nextmove.Child = new List<Move>();
+
+            FutureMovesImproved(nextmove, m);
+            foreach (Move after in nextmove.Child)
             {
 
                 if (player)
@@ -252,8 +255,8 @@ public class AI
                         return alpha;
                     }
                 }
-                indexer[i] = temp;
-                m.UndoChangePosition(current);
+                after.Child = new List <Move>();
+                m.UndoChangePosition(after);
                 m.UndoChangesArrayNumbers(after, current);
             }
         }
@@ -291,7 +294,10 @@ public class AI
                 }
             }
             CopyModel(m, temp);
+            p.possibles = new Move[8];
+            p.amountOfMoves = 0;
         }
+        
         actuallymove(m, bestmove);
     }
 

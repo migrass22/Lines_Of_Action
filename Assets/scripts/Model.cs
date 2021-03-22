@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using System.Linq;
 // Class for all logical expression
 public class Model
 {
@@ -29,6 +29,15 @@ public class Model
         whites = new List<Piece>();
         blacks = new List<Piece>();
         board = new BitBoard();
+    }
+
+    // Copy number arrays from a given model to this model
+    public void CopyNumberArrays(Model m) 
+    {
+        m.col.CopyTo(this.col,0);
+        m.row.CopyTo(this.row, 0);
+        m.sdiagonal.CopyTo(this.sdiagonal, 0);
+        m.pdiagonal.CopyTo(this.pdiagonal, 0);
     }
 
     // Get a bool of a player and return the list of the pieces for that player
@@ -114,6 +123,7 @@ public class Model
         }
         return false;
     }
+
     // Get a Certain piece and remove it from its list
     internal void RemovePiece(Piece p)
     {
@@ -195,10 +205,10 @@ public class Model
         Vector2Int dir = new Vector2Int(end.x - start.x, end.y - start.y);
         if (dir.x != 0)
             if (dir.x > 0) { dir.x /= dir.x; }
-        if (dir.x < 0) { dir.x /= -dir.x; }
+            if (dir.x < 0) { dir.x /= -dir.x; }
         if (dir.y != 0)
             if (dir.y > 0) { dir.y /= dir.y; }
-        if (dir.y < 0) { dir.y /= -dir.y; }
+            if (dir.y < 0) { dir.y /= -dir.y; }
         // Reapet everything below this for every other direction
         // Things can change 6 times or 4 times depending if eating piece or not
         // Check if the move was made in a row
@@ -301,32 +311,29 @@ public class Model
     // Get a piece and return where it can go to using move arrays
     public void PossibleMovesImproved(Piece p)
     {
-        if (p.amountOfMoves == 0)
-        {
-            // y position is amount of pieces in this num of col
-            // x position is number of pieces in this num of row
-            int colmove = col[p.position.x];
-            int rowmove = row[p.position.y];
-            // Turn a position to the index of correct diagonal
-            int pdiagmove = pdiagonal[p.position.x - p.position.y + 7];
-            int sdiagmove = sdiagonal[p.position.y + p.position.x];
+        // y position is amount of pieces in this num of col
+        // x position is number of pieces in this num of row
+        int colmove = col[p.position.x];
+        int rowmove = row[p.position.y];
+        // Turn a position to the index of correct diagonal
+        int pdiagmove = pdiagonal[p.position.x - p.position.y + 7];
+        int sdiagmove = sdiagonal[p.position.y + p.position.x];
 
-            // Check for col moves of piece
-            OneLineMoves(p, new Vector2Int(p.position.x, p.position.y + colmove), new Vector2Int(0, 1));
-            OneLineMoves(p, new Vector2Int(p.position.x, p.position.y - colmove), new Vector2Int(0, -1));
+        // Check for col moves of piece
+        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y + colmove), new Vector2Int(0, 1));
+        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y - colmove), new Vector2Int(0, -1));
 
-            // Check for row moves of piece
-            OneLineMoves(p, new Vector2Int(p.position.x + rowmove, p.position.y), new Vector2Int(1, 0));
-            OneLineMoves(p, new Vector2Int(p.position.x - rowmove, p.position.y), new Vector2Int(-1, 0));
+        // Check for row moves of piece
+        OneLineMoves(p, new Vector2Int(p.position.x + rowmove, p.position.y), new Vector2Int(1, 0));
+        OneLineMoves(p, new Vector2Int(p.position.x - rowmove, p.position.y), new Vector2Int(-1, 0));
 
-            // Check for the primary diagonal of the piece
-            OneLineMoves(p, new Vector2Int(p.position.x + pdiagmove, p.position.y + pdiagmove), new Vector2Int(1, 1));
-            OneLineMoves(p, new Vector2Int(p.position.x - pdiagmove, p.position.y - pdiagmove), new Vector2Int(-1, -1));
+        // Check for the primary diagonal of the piece
+        OneLineMoves(p, new Vector2Int(p.position.x + pdiagmove, p.position.y + pdiagmove), new Vector2Int(1, 1));
+        OneLineMoves(p, new Vector2Int(p.position.x - pdiagmove, p.position.y - pdiagmove), new Vector2Int(-1, -1));
 
-            // Check for the secondery diagonal of the piece
-            OneLineMoves(p, new Vector2Int(p.position.x + sdiagmove, p.position.y - sdiagmove), new Vector2Int(1, -1));
-            OneLineMoves(p, new Vector2Int(p.position.x - sdiagmove, p.position.y + sdiagmove), new Vector2Int(-1, 1));
-        }
+        // Check for the secondery diagonal of the piece
+        OneLineMoves(p, new Vector2Int(p.position.x + sdiagmove, p.position.y - sdiagmove), new Vector2Int(1, -1));
+        OneLineMoves(p, new Vector2Int(p.position.x - sdiagmove, p.position.y + sdiagmove), new Vector2Int(-1, 1));
     }
 
     // Get a piece, an endpoint and a direction

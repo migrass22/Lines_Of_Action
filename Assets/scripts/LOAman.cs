@@ -192,12 +192,12 @@ public class LOAman : MonoBehaviour
         }
         return false;
     }
+
     public bool IsBefore(int x, int y, int enemyx, int enemyy) 
     {
         int dist1x = x - xBoard, dist2x = enemyx - xBoard, dist1y = y - yBoard, dist2y = enemyy - yBoard;
         return Math.Abs(dist1x) <= Math.Abs(dist2x) && Math.Abs(dist1y) <= Math.Abs(dist2y);
     }
-
 
     //// Get a piece and return where it can go to using move arrays
     //public void PossibleMovesImproved()
