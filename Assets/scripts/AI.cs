@@ -60,9 +60,58 @@ public class AI
         // If winning reward higeset number if losing punihs with lowest number
         score += WinninOrLosing(move, m);
 
-        return player ? -score : score;
+        return score;
+        //return player ? -score : score;
     }
 
+
+
+    public int pvSearch(Move move, int alpha, int beta, int depth, bool currentplayer, Model m)
+    {
+        m.MakeMove(move);
+        if (depth == searchdepth - 1)
+        {
+            return Evaluate(move, m);
+        }
+
+        currentplayer = !currentplayer;
+        Move nextmove = new Move();
+        List<Piece> indexer = new List<Piece>();
+        foreach (Piece p in m.GetPiecesByBool(player))
+        {
+            indexer.Add(p);
+        }
+        for (int i = 0; i < indexer.Count; i++)
+        {
+            nextmove.pieceToMove = new Piece(indexer[i]);
+            nextmove.Child = new List<Move>();
+            m.FutureMovesImproved(nextmove);
+            foreach (Move after in nextmove.Child)
+            {
+                var score = -pvSearch(after, -alpha - 1, -alpha, depth + 1, currentplayer, m);
+                m.UndoChangePosition(after);
+                if (alpha < score && score < beta)
+                {
+                    score = -pvSearch(after, -beta, -score, depth + 1, currentplayer, m);
+                    m.UndoChangePosition(after);
+                }
+                else
+                {
+                    score = -pvSearch(after, -beta, -alpha, depth + 1, currentplayer, m);
+                    m.UndoChangePosition(after);
+                }
+                alpha = max(alpha, score);
+                if (alpha >= beta)
+                {
+                    //m.UndoChangePosition(move);
+                    return alpha;
+                }
+            }
+        }
+        return alpha;
+    }
+
+    // This is liquid gold
     // For some reason in random some moves cause me to create insane amount of pieces in the temp module - FIX THIS
     public int RecursionEvaluate(Model m, int depth, Move current, int alpha, int beta, bool currentplayer)
     {
@@ -75,6 +124,9 @@ public class AI
             return Evaluate(current, m);
         }
         currentplayer = !currentplayer;
+        if (currentplayer)
+        { beta = 10000;}
+        else { alpha = -10000; }
         Move nextmove = new Move();
         List<Piece> indexer = new List<Piece>();
         foreach (Piece p in m.GetPiecesByBool(player))
@@ -85,42 +137,25 @@ public class AI
         {
             nextmove.pieceToMove = new Piece(indexer[i]);
             nextmove.Child = new List<Move>();
-            nextmove.Child.AddRange(KillerMoves[depth]);
-            m.FutureMovesImproved(nextmove, m);
+            //nextmove.Child.AddRange(KillerMoves[depth]);
+            m.FutureMovesImproved(nextmove);
             foreach (Move after in nextmove.Child)
             {
+                int score = RecursionEvaluate(m, depth + 1, after, alpha, beta, currentplayer);
+                m.UndoChangePosition(after);
                 if (player)
                 {
-                    beta = min(beta, RecursionEvaluate(m, depth + 1, after, alpha, beta, currentplayer));
-                    m.UndoChangePosition(after);
+                    beta = min(beta, score);
                     if (alpha >= beta)
                     {
-                        if (KillerMoves[depth].Contains(after))
-                        {
-                            KillerMoves[depth].Remove(after);
-                            after.score -= 2;
-                        }
-                        else 
-                        {
-                            KillerMoves[depth].Add(new Move(after));
-                        }
                         return beta;
                     }
                 }
                 else
                 {
-                    alpha = max(alpha, RecursionEvaluate(m, depth + 1, after, alpha, beta, currentplayer));
-                    m.UndoChangePosition(after);
+                    alpha = max(alpha, score);
                     if (alpha >= beta)
                     {
-                        if (!KillerMoves[depth].Contains(after))
-                        {
-                            KillerMoves[depth].Add(new Move(after));
-                        }
-                        else
-                        {
-                            after.score += 2;
-                        }
                         return alpha;
                     }
                 }
@@ -129,18 +164,13 @@ public class AI
         return player ? beta : alpha;
     }
 
+
     public void aimove(Model m)
     {
-        KillerMoves = new List<Move>[searchdepth];
-        for (int i = 0; i < searchdepth; i++)
-        {
-            KillerMoves[i] = new List<Move>();
-        }
         // Copy model so i can change it
         Model temp = new Model(m);
         Move bestmove = new Move();
         bestmove.score = int.MinValue;
-        int current = int.MinValue;
         // Im using stopwatch to calculate the time spent on methods 
         var StopWatch = System.Diagnostics.Stopwatch.StartNew();
         // Go over all the pieces the ai holds (black)
@@ -151,11 +181,12 @@ public class AI
             Move move = new Move();
             move.pieceToMove = p;
             // Get the future possible moves for the current piece
-            temp.FutureMovesImproved(move, m);
+            temp.FutureMovesImproved(move);
             foreach (Move nextmove in move.Child)
             {
+                var current = pvSearch(nextmove, -1000, 1000, 0, !player, temp);
                 // Find the score given to this move
-                current = RecursionEvaluate(temp, 0, nextmove, -10000, 10000, !player);
+                //var current = RecursionEvaluate(temp, 0, nextmove, -10000, 10000, !player);
                 // Save the move if its better score-wise
                 if (bestmove.score < current)
                 {
@@ -317,12 +348,13 @@ public class AI
         return Math.Sqrt(x ^ 2 + y ^ 2);
     }
 
-    // Get 2 moves
-    // Return the subtruction of their scores
-    public static int CompareTwoMoves(Move a, Move b) 
-    {
-        return a.score - b.score;
-    }
+
+
+
+
+
+
+
 
 
     //-------------------------- Past Versions (graveyard)----------------------------
@@ -433,5 +465,79 @@ public class AI
     //    }
     //    return false;
     //}
+    //if (!KillerMoves[depth].Contains(after))
+    //{
+    //    KillerMoves[depth].Add(new Move(after));
+    //}
+    //else
+    //{
+    //    after.score += 2;
+    //}
+    //if (KillerMoves[depth].Contains(after))
+    //{
+    //    KillerMoves[depth].Remove(after);
+    //    after.score -= 2;
+    //}
+    //else 
+    //{
+    //    KillerMoves[depth].Add(new Move(after));
+    //}
+
+    //// Get 2 moves
+    //// Return the subtruction of their scores
+    //public static int CompareTwoMoves(Move a, Move b) 
+    //{
+    //    return a.score - b.score;
+    //}
+    //// Trying to improve my ai move method 
+    //public void BetterAiMove(Model m)
+    //{
+    //    Model temp = new Model(m);
+    //    Move bestmove = new Move(), IteratorMove = new Move();
+    //    bestmove.score = -10000;
+
+    //    var StopWatch = System.Diagnostics.Stopwatch.StartNew();
+    //    List<Move> moves = GenerateAllMoves(false, IteratorMove, temp);
+    //    foreach (Move Node in moves)
+    //    {
+    //        Move save = new Move(Node);
+    //        var current = pvSearch(Node, -10000, 10000, 0, false, temp);
+    //        // Save the move if its better score-wise
+    //        if (bestmove.score < current)
+    //        {
+    //            bestmove = new Move(save);
+    //            bestmove.score = current;
+    //        }
+    //        temp = new Model();
+    //    }
+    //    StopWatch.Stop();
+    //    var elapsedtime = StopWatch.ElapsedMilliseconds;
+    //    Debug.Log("ai move recursion duration : " + elapsedtime / 1000 + " seconds");
+    //    Debug.Log("Move made from square " + bestmove.pieceToMove.position + " to square " + bestmove.moveto);
+    //    // Make the move with my chosen move
+    //    actuallymove(bestmove);
+    //}
+
+    //// Get a player, Get a move and a model
+    //// Add every possible move to the child of the given move
+    //private List<Move> GenerateAllMoves(bool player, Move move, Model m)
+    //{
+    //    List<Move> moves = new List<Move>();
+    //    move.Child = new List<Move>();
+    //    move.Child = moves;
+    //    Move temp = new Move();
+    //    foreach (Piece p in m.GetPiecesByBool(player))
+    //    {
+    //        temp = new Move();
+    //        temp.pieceToMove = new Piece(p);
+    //        m.FutureMovesImproved(temp);
+    //        move.Child.AddRange(temp.Child);
+    //    }
+    //    return move.Child;
+    //}
+
+
+
+
 
 }

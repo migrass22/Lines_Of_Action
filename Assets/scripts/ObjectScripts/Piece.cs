@@ -34,12 +34,11 @@ public class Piece
     {
         this.piece = copythis.piece;
         this.player = copythis.player;
-        this.position = copythis.position;
+        this.position = new Vector2Int(copythis.position.x, copythis.position.y);
     }
 
     public override string ToString()
     {
-        return this.position.ToString();
+        return this.position.ToString() + this.player.ToString();
     }
-
 }

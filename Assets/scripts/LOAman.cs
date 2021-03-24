@@ -88,32 +88,11 @@ public class LOAman : MonoBehaviour
             DestroyMovePlates();
             Move move = new Move();
             move.pieceToMove = p;
-            m.FutureMovesImproved(move, m);
+            m.FutureMovesImproved(move);
             //m.PossibleMovesImproved(p);
             foreach (Move possiblemove in move.Child)
             {
                 MovePlateSpawn(possiblemove);
-            }
-        }
-    }
-
-
-
-
-    // Decide based on positions if the plate created should be attack one or normal one
-    public void MakeTypePlates(Vector2Int pos, Vector2Int enemy, bool flag)
-    {
-
-        if (m.IsOnBoard(pos.x, pos.y) && (IsBefore(pos.x, pos.y, enemy.x, enemy.y) || flag))
-        {
-            if (!m.board.IsPieceHere(pos))
-            {
-                MovePlateSpawn(new Move(pos, false));
-
-            }
-            else if (m.GetPieceByIndex(pos).player != player)
-            {
-                MovePlateSpawn(new Move(pos, true));
             }
         }
     }
@@ -136,69 +115,6 @@ public class LOAman : MonoBehaviour
         int dist1x = x - xBoard, dist2x = enemyx - xBoard, dist1y = y - yBoard, dist2y = enemyy - yBoard;
         return Math.Abs(dist1x) <= Math.Abs(dist2x) && Math.Abs(dist1y) <= Math.Abs(dist2y);
     }
-
-    //// Get a piece and return where it can go to using move arrays
-    //public void PossibleMovesImproved()
-    //{
-    //    if (p.amountOfMoves == 0)
-    //    {
-    //        // y position is amount of pieces in this num of col
-    //        // x position is number of pieces in this num of row
-    //        int colmove = m.col[p.position.x];
-    //        int rowmove = m.row[p.position.y];
-    //        // Turn a position to the index of correct diagonal
-    //        int pdiagmove = m.pdiagonal[p.position.x - p.position.y + 7];
-    //        int sdiagmove = m.sdiagonal[p.position.y + p.position.x];
-
-    //        // Check for col moves of piece
-    //        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y + colmove), new Vector2Int(0, 1));
-    //        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y - colmove), new Vector2Int(0, -1));
-
-    //        // Check for row moves of piece
-    //        OneLineMoves(p, new Vector2Int(p.position.x + rowmove, p.position.y), new Vector2Int(1, 0));
-    //        OneLineMoves(p, new Vector2Int(p.position.x - rowmove, p.position.y), new Vector2Int(-1, 0));
-
-    //        // Check for the primary diagonal of the piece
-    //        OneLineMoves(p, new Vector2Int(p.position.x + pdiagmove, p.position.y + pdiagmove), new Vector2Int(1, 1));
-    //        OneLineMoves(p, new Vector2Int(p.position.x - pdiagmove, p.position.y - pdiagmove), new Vector2Int(-1, -1));
-
-    //        // Check for the secondery diagonal of the piece
-    //        OneLineMoves(p, new Vector2Int(p.position.x + sdiagmove, p.position.y - sdiagmove), new Vector2Int(1, -1));
-    //        OneLineMoves(p, new Vector2Int(p.position.x - sdiagmove, p.position.y + sdiagmove), new Vector2Int(-1, 1));
-
-    //    }
-
-    //}
-
-    //// Get a piece, an endpoint and a direction
-    //// Add a new move to the pieces possible moves if said move is possible
-    //public void OneLineMoves(Piece p, Vector2Int endPoint, Vector2Int dir) 
-    //{
-    //    // Check for the column of this piece
-    //    // End point is on the board?
-    //    if (m.IsOnBoard(endPoint.x, endPoint.y))
-    //    {
-    //        // Are there enemy pieces i jump over?
-    //        if (!m.board.IsEnemyBeforeHere(p.position, endPoint, dir, player))
-    //        {
-    //            // Is there a piece at the end?
-    //            if (m.board.IsPieceHere(endPoint))
-    //            {
-    //                // Is this piece an enemy Piece?
-    //                if (m.board.IsEnemy(endPoint, player))
-    //                {
-    //                    // Create a new attack move at this point, save on the piece,
-    //                    p.possibles[p.amountOfMoves++] = new Move(p, endPoint, 0, true);
-    //                }
-    //            }
-    //            else
-    //            {
-    //                // No piece at end point -> create a new normal move
-    //                p.possibles[p.amountOfMoves++] = new Move(p, endPoint, 0, false);
-    //            }
-    //        }
-    //    }
-    //}
 
     // Create the move plate sprites using the positions deemed possible to move to
     private void MovePlateSpawn(Move m)
@@ -294,5 +210,86 @@ public class LOAman : MonoBehaviour
     //    LineMovePlate(new Vector2Int(1, 1));
     //    LineMovePlate(new Vector2Int(-1, 1));
     //}
+    //// Get a piece and return where it can go to using move arrays
+    //public void PossibleMovesImproved()
+    //{
+    //    if (p.amountOfMoves == 0)
+    //    {
+    //        // y position is amount of pieces in this num of col
+    //        // x position is number of pieces in this num of row
+    //        int colmove = m.col[p.position.x];
+    //        int rowmove = m.row[p.position.y];
+    //        // Turn a position to the index of correct diagonal
+    //        int pdiagmove = m.pdiagonal[p.position.x - p.position.y + 7];
+    //        int sdiagmove = m.sdiagonal[p.position.y + p.position.x];
+
+    //        // Check for col moves of piece
+    //        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y + colmove), new Vector2Int(0, 1));
+    //        OneLineMoves(p, new Vector2Int(p.position.x, p.position.y - colmove), new Vector2Int(0, -1));
+
+    //        // Check for row moves of piece
+    //        OneLineMoves(p, new Vector2Int(p.position.x + rowmove, p.position.y), new Vector2Int(1, 0));
+    //        OneLineMoves(p, new Vector2Int(p.position.x - rowmove, p.position.y), new Vector2Int(-1, 0));
+
+    //        // Check for the primary diagonal of the piece
+    //        OneLineMoves(p, new Vector2Int(p.position.x + pdiagmove, p.position.y + pdiagmove), new Vector2Int(1, 1));
+    //        OneLineMoves(p, new Vector2Int(p.position.x - pdiagmove, p.position.y - pdiagmove), new Vector2Int(-1, -1));
+
+    //        // Check for the secondery diagonal of the piece
+    //        OneLineMoves(p, new Vector2Int(p.position.x + sdiagmove, p.position.y - sdiagmove), new Vector2Int(1, -1));
+    //        OneLineMoves(p, new Vector2Int(p.position.x - sdiagmove, p.position.y + sdiagmove), new Vector2Int(-1, 1));
+
+    //    }
+
+    //}
+
+    //// Get a piece, an endpoint and a direction
+    //// Add a new move to the pieces possible moves if said move is possible
+    //public void OneLineMoves(Piece p, Vector2Int endPoint, Vector2Int dir) 
+    //{
+    //    // Check for the column of this piece
+    //    // End point is on the board?
+    //    if (m.IsOnBoard(endPoint.x, endPoint.y))
+    //    {
+    //        // Are there enemy pieces i jump over?
+    //        if (!m.board.IsEnemyBeforeHere(p.position, endPoint, dir, player))
+    //        {
+    //            // Is there a piece at the end?
+    //            if (m.board.IsPieceHere(endPoint))
+    //            {
+    //                // Is this piece an enemy Piece?
+    //                if (m.board.IsEnemy(endPoint, player))
+    //                {
+    //                    // Create a new attack move at this point, save on the piece,
+    //                    p.possibles[p.amountOfMoves++] = new Move(p, endPoint, 0, true);
+    //                }
+    //            }
+    //            else
+    //            {
+    //                // No piece at end point -> create a new normal move
+    //                p.possibles[p.amountOfMoves++] = new Move(p, endPoint, 0, false);
+    //            }
+    //        }
+    //    }
+    //}
+    //// Decide based on positions if the plate created should be attack one or normal one
+    //public void MakeTypePlates(Vector2Int pos, Vector2Int enemy, bool flag)
+    //{
+
+    //    if (m.IsOnBoard(pos.x, pos.y) && (IsBefore(pos.x, pos.y, enemy.x, enemy.y) || flag))
+    //    {
+    //        if (!m.board.IsPieceHere(pos))
+    //        {
+    //            MovePlateSpawn(new Move(pos, false));
+
+    //        }
+    //        else if (m.GetPieceByIndex(pos).player != player)
+    //        {
+    //            MovePlateSpawn(new Move(pos, true));
+    //        }
+    //    }
+    //}
+
 
 }
+

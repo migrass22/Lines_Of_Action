@@ -228,6 +228,7 @@ public class Game : MonoBehaviour
             {
                 AI ai = new AI();
                 ai.aimove(model);
+                //ai.BetterAiMove(model);
             }
         }
     }

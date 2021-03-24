@@ -195,15 +195,18 @@ public class Model
         // Update number arrays after a move is made
         UpdateArrayNumbers(move.pieceToMove.position, move.moveto, move.attack);
         // Update all bit boards after a move is made
-        try
-        {
-            board.MakeMove(move.pieceToMove.position, move.moveto, move.pieceToMove.player);
-         p.position = move.moveto; } 
-        catch (Exception e) 
-        {
-            Debug.LogError(" failed at " + move);
-        }
-        
+        board.MakeMove(move.pieceToMove.position, move.moveto, move.pieceToMove.player);
+        p.position = new Vector2Int(move.moveto.x, move.moveto.y);
+        //try
+        //{
+        //    board.MakeMove(move.pieceToMove.position, move.moveto, move.pieceToMove.player);
+        //    p.position = new Vector2Int(move.moveto.x, move.moveto.y);
+        //} 
+        //catch (Exception e) 
+        //{
+        //    Debug.LogError(" failed at " + move);
+        //}
+
     }
 
     public void UndoChangePosition(Move move) 
@@ -215,7 +218,9 @@ public class Model
         Piece p = GetPieceByIndex(move.moveto);
         board.undomove(move.moveto, move.pieceToMove.position, move.pieceToMove.player, move.attack);
         UndoChangesArrayNumbers(new Move(move.pieceToMove.position, move.attack), move);
-        p.position = move.pieceToMove.position;
+        p.position = new Vector2Int(move.pieceToMove.position.x, move.pieceToMove.position.y);
+        move.Child = new List<Move>();
+
     }
 
 
@@ -350,16 +355,16 @@ public class Model
     }
 
     // Get a piece and return where it can go to using move arrays
-    public void FutureMovesImproved(Move move, Model m)
+    public void FutureMovesImproved(Move move)
     {
         Vector2Int position = move.pieceToMove.position;
         // y position is amount of pieces in this num of col
         // x position is number of pieces in this num of row
-        int colmove = m.col[position.x];
-        int rowmove = m.row[position.y];
+        int colmove = col[position.x];
+        int rowmove = row[position.y];
         // Turn a position to the index of correct diagonal
-        int pdiagmove = m.pdiagonal[position.y - position.x + 7];
-        int sdiagmove = m.sdiagonal[position.y + position.x];
+        int pdiagmove = pdiagonal[position.y - position.x + 7];
+        int sdiagmove = sdiagonal[position.y + position.x];
 
         // Check for col moves of piece
         MoveInAline(move, new Vector2Int(position.x, position.y + colmove), new Vector2Int(0, 1));
@@ -396,21 +401,14 @@ public class Model
                     // Is this piece an enemy Piece?
                     if (board.IsEnemy(endPoint, move.pieceToMove.player))
                     {
-                        if (!move.Child.Contains(new Move(move.pieceToMove, endPoint, 0, true)))
-                        {       
-                            // Create a new attack move at this point, save on the piece,
-                            move.Child.Add(new Move(move.pieceToMove, endPoint, 0, true));
-                        }
-
+                        // Create a new attack move at this point, save on the piece,
+                        move.Child.Add(new Move(move.pieceToMove, endPoint, 0, true));
                     }
                 }
                 else
                 {
-                    if (!move.Child.Contains(new Move(move.pieceToMove, endPoint, 0, false))) 
-                    {
-                        // No piece at end point -> create a new normal move
-                        move.Child.Add(new Move(move.pieceToMove, endPoint, 0, false));
-                    }
+                    // No piece at end point -> create a new normal move
+                    move.Child.Add(new Move(move.pieceToMove, endPoint, 0, false));
                 }
             }
         }

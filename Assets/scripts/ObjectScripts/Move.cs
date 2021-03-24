@@ -41,7 +41,7 @@ public class Move
 
     public Move(Move copythis)
     {
-        this.moveto = copythis.moveto;
+        this.moveto = new Vector2Int(copythis.moveto.x, copythis.moveto.y);
         this.pieceToMove = new Piece(copythis.pieceToMove);
         this.score = copythis.score;
         this.attack = copythis.attack;
