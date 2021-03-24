@@ -39,4 +39,17 @@ public class Move
         this.Child = new List<Move>(8);
     }
 
+    public Move(Move copythis)
+    {
+        this.moveto = copythis.moveto;
+        this.pieceToMove = new Piece(copythis.pieceToMove);
+        this.score = copythis.score;
+        this.attack = copythis.attack;
+        this.Child = new List<Move>(8);
+    }
+
+    public override string ToString()
+    {
+        return this.pieceToMove.ToString() + " -> " + this.moveto.ToString();
+    }
 }

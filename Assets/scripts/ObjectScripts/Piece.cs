@@ -30,4 +30,16 @@ public class Piece
         this.player = player;
     }
 
+    public Piece(Piece copythis)
+    {
+        this.piece = copythis.piece;
+        this.player = copythis.player;
+        this.position = copythis.position;
+    }
+
+    public override string ToString()
+    {
+        return this.position.ToString();
+    }
+
 }

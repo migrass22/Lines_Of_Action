@@ -10,7 +10,7 @@ public class BitBoard
     // Init all bit boards and possible direction for movement
     public BitBoard()
     {
-        board = 0b0111_1110_1000_0001_1000_0001_1000_0001_1000_0001_1000_0001_1000_0001_0111_1110;
+        board =  0b0111_1110_1000_0001_1000_0001_1000_0001_1000_0001_1000_0001_1000_0001_0111_1110;
         whites = 0b0000_0000_1000_0001_1000_0001_1000_0001_1000_0001_1000_0001_1000_0001_0000_0000;
         blacks = 0b0111_1110_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0111_1110;
 
@@ -51,8 +51,11 @@ public class BitBoard
     // Check if this index is in range and can be moved in said direction
     public bool InRange(int index, Vector2Int i)
     {
-        return (index + i.x + i.y > 64) || (((index + 1) % 8) == 0 && i.x < 0) ||
-               ((index + 2) % 8 == 0 && i.x == 1) || (index + i.x + i.y < 0);
+        // First and last statement checks if im in range of 0 to 64
+        // Second checks if im at the start of a line and moving backwards (if yes then stop)
+        // Third statement checks if im at the end of a line and moving forward  
+        return (index + i.x + i.y > 64) || ((index % 8) == 0 && i.x < 0) ||
+               ((index + 1) % 8 == 0 && i.x == 1) || (index + i.x + i.y < 0);
     }
 
     // Get a bool for a player and check if the position given is pointing to the other players pieces
@@ -61,11 +64,11 @@ public class BitBoard
         // If true check for black pieces if false check for white pieces
         if (player)
         {
-            return IsBlackPiece(pos.x, pos.y);
+            return IsBlackPiece(pos);
         }
         else 
         {
-            return IsWhitePiece(pos.x, pos.y);
+            return IsWhitePiece(pos);
         }
     }
 
@@ -89,8 +92,8 @@ public class BitBoard
     public long TurnIndexToBitBoard(int index)
     {
         // long mask = 2^index 
-        long mask = 0b100000000000000000000000000000000000000000000000000000000000000;
-        mask >>= index;
+        long mask = 1;
+        mask <<= 63 - index; 
         return mask;
     }
 
@@ -151,11 +154,11 @@ public class BitBoard
         board = whites | blacks;
     }
 
-    public void copyboard(BitBoard b) 
+    public void CopyThisBoard(BitBoard b) 
     {
-        b.blacks = blacks;
-        b.whites = whites;
-        b.board = board;
+        this.blacks = b.blacks;
+        this.whites = b.whites;
+        this.board = b.board;
     }
 
     public void undomove(Vector2Int start, Vector2Int end, bool player, bool attack) 
@@ -168,7 +171,7 @@ public class BitBoard
             whites ^= TurnIndexToBitBoard(before);
             if (attack)
             {
-                blacks |= TurnIndexToBitBoard(after);
+                blacks |= TurnIndexToBitBoard(before);
             }
         }
         else
@@ -177,7 +180,7 @@ public class BitBoard
             blacks ^= TurnIndexToBitBoard(before);
             if (attack)
             {
-                whites |= TurnIndexToBitBoard(after);
+                whites |= TurnIndexToBitBoard(before);
             }
         }
 
@@ -249,19 +252,19 @@ public class BitBoard
     }
 
     // Check if a given index is holding a black piece
-    public bool IsBlackPiece(int x, int y)
+    public bool IsBlackPiece(Vector2Int position)
     {
-        return (blacks & TurnIndexToBitBoard(x + y * 8 - 1)) != 0;
+        return (blacks & TurnIndexToBitBoard(PositionToIndex(position))) != 0;
     }
 
     // Check if a given index is holding a white piece
-    public bool IsWhitePiece(int x, int y)
+    public bool IsWhitePiece(Vector2Int position)
     {
-        return (whites & TurnIndexToBitBoard(x + y * 8 - 1)) != 0;
+        return (whites & TurnIndexToBitBoard(PositionToIndex(position))) != 0;
     }
 
     public int PositionToIndex(Vector2Int pos) 
     {
-        return pos.x + pos.y * 8 - 1;
+        return pos.x + pos.y * 8;
     }
 }

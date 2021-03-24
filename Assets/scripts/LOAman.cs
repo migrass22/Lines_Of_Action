@@ -70,97 +70,35 @@ public class LOAman : MonoBehaviour
 
     private void OnMouseUp()
     {
+        bool endgame = controller.GetComponent<Game>().IsGameOver();
         // Activate only the first time, find the piece and save it
         if (flag) 
         {
-            p = m.GetPieceByIndex(xBoard, yBoard);
+            p = m.GetPieceByIndex(new Vector2Int(xBoard, yBoard));
             flag = false;
         }
-        if (controller.GetComponent<Game>().IsGameOver())
+        if (endgame)
         {
             controller.GetComponent<Game>().CleanUp();
             controller.GetComponent<Game>().InitializeGame();
         }
         // If this is the current players piece and we dont use ai then continue
-        if (player == controller.GetComponent<Game>().GetCurrentPlayer())
+        if (player == controller.GetComponent<Game>().GetCurrentPlayer() && !endgame)
         {
-            // Change here the move generation
-            //DestroyMovePlates();
-            //InitMovePlates();
             DestroyMovePlates();
-            m.PossibleMovesImproved(p);
-            for (int i = 0; p.possibles[i] != null ; i++)
+            Move move = new Move();
+            move.pieceToMove = p;
+            m.FutureMovesImproved(move, m);
+            //m.PossibleMovesImproved(p);
+            foreach (Move possiblemove in move.Child)
             {
-                MovePlateSpawn(p.possibles[i]);
+                MovePlateSpawn(possiblemove);
             }
         }
     }
 
-    public void InitMovePlates()
-    {
-        // Initiate all directions according to amound of pieces in the direction
-        LineMovePlate(new Vector2Int(1,0));
-        LineMovePlate(new Vector2Int(0, 1));
-        LineMovePlate(new Vector2Int(1, 1));
-        LineMovePlate(new Vector2Int(-1, 1));
-    }
-
-    private void LineMovePlate(Vector2Int dir)
-    {
-        Model model = controller.GetComponent<Game>().model;
-        int x = xBoard + dir.x;
-        int y = yBoard + dir.y;
-        int antiY = yBoard - dir.y;
-        int antiX = xBoard - dir.x;
-        int enemy1x = 8, enemy1y= 8, enemy2x= 8, enemy2y =8;
-        bool flag1 = true, flag2 = true;
-
-        int counter = 1;
-        while (model.IsOnBoard(x, y) || model.IsOnBoard(antiX,antiY)) 
-        {
-            if (model.IsOnBoard(x, y))
-            {
-                if (model.board.IsPieceHere(new Vector2Int(x,y)))
-                {
-                    if (model.board.IsEnemy(new Vector2Int(x, y), player) && flag1)
-                    {
-                        enemy1x = x;
-                        enemy1y = y;
-                        flag1 = false;
-                    }
-                    counter++;
-                }
-            }
-
-            if (model.IsOnBoard(antiX, antiY))
-            {
-                if (model.board.IsPieceHere(new Vector2Int(antiX, antiY)))
-                {
-                    if (model.GetPieceByIndex(antiX, antiY).player != player && flag2)
-                    {
-                        enemy2x = antiX;
-                        enemy2y = antiY;
-                        flag2 = false;
-                    }
-                    counter++;
-                }
-            }
-            x += dir.x;
-            y += dir.y;
-            antiX -= dir.x;
-            antiY -= dir.y;
-        }
 
 
-        x = xBoard + (counter * dir.x);
-        y = yBoard + (counter * dir.y);
-        MakeTypePlates(new Vector2Int(x, y), new Vector2Int(enemy1x, enemy1y), flag1);
-
-
-        antiX = xBoard + (counter * - dir.x);
-        antiY = yBoard + (counter * - dir.y);
-        MakeTypePlates(new Vector2Int(antiX, antiY), new Vector2Int(enemy2x, enemy2y), flag2);
-    }
 
     // Decide based on positions if the plate created should be attack one or normal one
     public void MakeTypePlates(Vector2Int pos, Vector2Int enemy, bool flag)
@@ -173,7 +111,7 @@ public class LOAman : MonoBehaviour
                 MovePlateSpawn(new Move(pos, false));
 
             }
-            else if (m.GetPieceByIndex(pos.x, pos.y).player != player)
+            else if (m.GetPieceByIndex(pos).player != player)
             {
                 MovePlateSpawn(new Move(pos, true));
             }
@@ -290,5 +228,71 @@ public class LOAman : MonoBehaviour
             Destroy(movePlates[i]);
         }
     }
+
+    // ----------------------------------------------- GraveYard -------------------------------------------
+    //private void LineMovePlate(Vector2Int dir)
+    //{
+    //    Model model = controller.GetComponent<Game>().model;
+    //    int x = xBoard + dir.x;
+    //    int y = yBoard + dir.y;
+    //    int antiY = yBoard - dir.y;
+    //    int antiX = xBoard - dir.x;
+    //    int enemy1x = 8, enemy1y= 8, enemy2x= 8, enemy2y =8;
+    //    bool flag1 = true, flag2 = true;
+
+    //    int counter = 1;
+    //    while (model.IsOnBoard(x, y) || model.IsOnBoard(antiX,antiY)) 
+    //    {
+    //        if (model.IsOnBoard(x, y))
+    //        {
+    //            if (model.board.IsPieceHere(new Vector2Int(x,y)))
+    //            {
+    //                if (model.board.IsEnemy(new Vector2Int(x, y), player) && flag1)
+    //                {
+    //                    enemy1x = x;
+    //                    enemy1y = y;
+    //                    flag1 = false;
+    //                }
+    //                counter++;
+    //            }
+    //        }
+
+    //        if (model.IsOnBoard(antiX, antiY))
+    //        {
+    //            if (model.board.IsPieceHere(new Vector2Int(antiX, antiY)))
+    //            {
+    //                if (model.GetPieceByIndex(antiX, antiY).player != player && flag2)
+    //                {
+    //                    enemy2x = antiX;
+    //                    enemy2y = antiY;
+    //                    flag2 = false;
+    //                }
+    //                counter++;
+    //            }
+    //        }
+    //        x += dir.x;
+    //        y += dir.y;
+    //        antiX -= dir.x;
+    //        antiY -= dir.y;
+    //    }
+
+
+    //    x = xBoard + (counter * dir.x);
+    //    y = yBoard + (counter * dir.y);
+    //    MakeTypePlates(new Vector2Int(x, y), new Vector2Int(enemy1x, enemy1y), flag1);
+
+
+    //    antiX = xBoard + (counter * - dir.x);
+    //    antiY = yBoard + (counter * - dir.y);
+    //    MakeTypePlates(new Vector2Int(antiX, antiY), new Vector2Int(enemy2x, enemy2y), flag2);
+    //}
+    //public void InitMovePlates()
+    //{
+    //    // Initiate all directions according to amound of pieces in the direction
+    //    LineMovePlate(new Vector2Int(1,0));
+    //    LineMovePlate(new Vector2Int(0, 1));
+    //    LineMovePlate(new Vector2Int(1, 1));
+    //    LineMovePlate(new Vector2Int(-1, 1));
+    //}
 
 }
