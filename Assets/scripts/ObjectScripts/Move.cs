@@ -5,6 +5,7 @@ using UnityEngine;
 // class to hold moves for ai, with score
 public class Move 
 {
+    // -------------------------------------------------------- Variables ------------------------------------------------------------------
     // Piece up for current move
     public Piece pieceToMove { get; set; }
     // Where to move the piece to
@@ -13,10 +14,12 @@ public class Move
     public int score { get; set; }
     // State of move, is it attacking something or not
     public bool attack { get; set; }
-
+    // Possible moves that can be played after 
     public List<Move> Child { get; set; }
 
-    // Ctor
+    // --------------------------------------------------------- Constructors ---------------------------------------------------------------
+    
+    // Normal contructor that recieves all the atributes a move has
     public Move(Piece pieceToMove, Vector2Int moveto, int score, bool attack)
     {
         this.moveto = moveto;
@@ -25,20 +28,25 @@ public class Move
         this.attack = attack;
         this.Child = new List<Move>(8);
     }
+
+    // Half full contructor that only recieves a location to move to and if its an attack or not
     public Move(Vector2Int moveto, bool attack)
     {
         this.moveto = moveto;
         this.attack = attack;
     }
+
+    // Empty contructor that initilizes every variable to 0 or null
     public Move() 
     {
         this.moveto = new Vector2Int(0, 0);
         this.pieceToMove = null;
-        this.score = 0;
+        this.score = -300;
         this.attack = false;
         this.Child = new List<Move>(8);
     }
 
+    // Copy Constructor to copy a given move value wise (deep copy)
     public Move(Move copythis)
     {
         this.moveto = new Vector2Int(copythis.moveto.x, copythis.moveto.y);
@@ -48,6 +56,10 @@ public class Move
         this.Child = new List<Move>(8);
     }
 
+
+    // -------------------------------------------------------- Utility Functions ------------------------------------------------------------
+
+    // A to string function that shows starting location and an end location
     public override string ToString()
     {
         return this.pieceToMove.ToString() + " -> " + this.moveto.ToString();

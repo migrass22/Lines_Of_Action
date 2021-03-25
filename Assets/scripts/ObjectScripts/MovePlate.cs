@@ -5,13 +5,17 @@ using UnityEngine;
 
 public class MovePlate : MonoBehaviour
 {
+    // --------------------------------------------------------------- Variables ------------------------------------------------------------------
+    // Game object to hold the controller for unity
     public GameObject controller;
+    // The reference for the piece im moving on mouse click
     GameObject reference = null;
     // Board positions
     int matrixX, matrixY;
-    // Can eat something by moving 
+    // Attack = true means can eat a piece
     public bool attack = false;
 
+    // --------------------------------------------------------------- Core Methods ----------------------------------------------------------------
 
     // Change color of the move plate to red the 
     public void Start()
@@ -35,20 +39,22 @@ public class MovePlate : MonoBehaviour
         Piece BeforePiece = model.GetPieceByIndex(before);
         controller.GetComponent<Game>().MoveAPieceInUnity(new Move(BeforePiece, after, 0, attack));
     }
+    
 
-    public void SetCoords(int x, int y) 
+    // --------------------------------------------------------------- getter / setter --------------------------------------------------------------
+
+
+    // Set the position for a move plate using a 2d vector
+    public void SetCoords(Vector2Int pos) 
     {
-        matrixX = x;
-        matrixY = y;
+        matrixX = pos.x;
+        matrixY = pos.y;
     }
 
+    // Set the reference for the piece using a game object
     public void SetReference(GameObject obj) 
     {
         reference = obj;
     }
 
-    public GameObject GetRefrence() 
-    {
-        return reference;
-    }
 }

@@ -6,130 +6,217 @@ using UnityEngine;
 using UnityEngine.Profiling;
 public class AI
 {
-    // To do:
+    /* To do:
     // 1. function to copy the current model into a temporary one -> saving only vector2int for positions V
     // 2. using that new model make moves using the function u already have to find the best move V MADE EVEN BETTER
     // 2.5 first move is easy second move by the other player should lower the score of the first move V
     // 3. orgenize please tom ffs
     // Figure out how to save moves VX
+
     // Currently depth = 4  ttm -> 66 sec
     //                      w/o eval -> ttm -> 50 sec
+    // UPGRADE GOT TO DEPTH 
+
     // UNDERSTAND HOW TO LOWER THE RECURSION TIME
     // (KILLER HEURISTIC?)
 
     // -------------------------------- Variables---------------------------------------
 
-    // The controller for the game
+    // The controller for the game*/
+
+    //// Trying out transposition table
+    //Hashtable transposition = new Hashtable();
+
+    // Just the model of the game
+    Model mainModel;
+
+    // Controller for the game
     GameObject controller = GameObject.FindGameObjectWithTag("GameController");
-    BitBoard b;
-    // What player is the ai (black)
-    bool player = false;
-    // How deep does the search go? deapth 6 ~ 820,000 moves
-    public int searchdepth = 4;
-    // Killer heuristic data structure 
-    public List<Move>[] KillerMoves;
 
-    //--------------------------------- Core Methods-------------------------------------
+    // Search depth for ai
+    private int searchDepth = 4;
 
-    private List<Move> GenerateMoves(List<Move> moves, Model m, int deapth)
+    // Qs search depth
+    private int qsDepth = 1;
+
+    // Constructor for the ai
+    public AI(Model m)
     {
-        List<Move> sortedkillers = new List<Move>();
-        for (int i = 0; i < moves.Count; i++)
+        this.mainModel = new Model(m);
+    }
+
+    // Base function to start the ai and make a move
+    public void StartAi()
+    {
+        // Variable to save the best move made
+        Move bestMove = new Move();
+
+        // Current score of the move
+        int current = 0;
+
+        // List of all possible moves for the current player (black)
+        List<Move> possibleMoves = mainModel.GenerateAllMoves(false);
+
+        // Trying out move ordering
+        SimpleMoveOrdering(possibleMoves, mainModel);
+
+        // Count preformence of the ai
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        // Temporary model to play on with the ai
+        Model temp = new Model(mainModel);
+
+        foreach (Move move in possibleMoves)
         {
-            moves[i].score = Evaluate(moves[i], m);
+            // make the move on the model
+            temp.MakeMove(move);
+            // send recursion to evaluate final node
+            current = pvSearch(move, -1000, 1000, 0, false, temp);
+            // undo the move
+            temp.Undomove(move);
+
+            // If the current move is better then the best one yet than save it
+            if (current > bestMove.score)
+            {
+                bestMove = new Move(move);
+            }
         }
-        moves.Sort(CompareTwoMoves);
-        return moves;
-    }
+        stopwatch.Stop();
+        // Document for future improvment
+        Debug.Log("Time spent deciding the move - " + stopwatch.ElapsedMilliseconds / 1000 + " seconds" + "\n Current depth - " + searchDepth);
+        Debug.Log("Move made - " + bestMove);
 
-    // Get a given model (in some point of time) and a move
-    // Determine score for the given state of game
-    public int Evaluate(Move move, Model m)
-    {
-        int score = 0;
-
-        // Reward having less pieces then enemy
-        score += AmountOfPieces(move, m);
-
-        // Calculate ceter of mass of all ai pieces and reward being close to the middle
-        score += StructureEvaluation(move, m);
-
-        // Reward begin away from frame of board
-        score += BadSquares(move, m);
-
-        // If winning reward higeset number if losing punihs with lowest number
-        score += WinninOrLosing(move, m);
-
-        return score;
-        //return player ? -score : score;
+        // Actually make a move 
+        actuallymove(bestMove);
     }
 
 
 
-    public int pvSearch(Move move, int alpha, int beta, int depth, bool currentplayer, Model m)
+    // --------------------------------------------- recursions ------------------------------------------------------------------------------
+
+
+    // Try #4 on the recursion (just testing now) -> this is the new liquid gold (this is diamond)
+    private int BaseReucrsion(int depth, bool currentplayer, Model m)
     {
-        m.MakeMove(move);
-        if (depth == searchdepth - 1)
+        // If im at a leaf node or game has ended go back
+        if (depth == searchDepth - 1 || m.checkwin(currentplayer))
+        {
+            return 1;
+        }
+        int current = 0;
+
+        // Switch to other player
+        currentplayer = !currentplayer;
+
+        // Generate all possible moves
+        List<Move> moves = m.GenerateAllMoves(currentplayer);
+
+        // Go over all the moves generated
+        foreach (Move nextmove in moves)
+        {
+            // Make possible move
+            m.MakeMove(nextmove);
+            // Continue down the search tree
+            current = BaseReucrsion(depth + 1, currentplayer, m);
+            // Undo move made
+            m.Undomove(nextmove);
+        }
+        return current;
+    }
+
+    // Try #2 negascout
+    private int pvSearch(Move move, int alpha, int beta, int depth, bool currentplayer, Model m)
+    {
+
+        // If im at a leaf node or game has ended go back
+        if (depth == searchDepth - 1 || m.checkwin(currentplayer))
         {
             return Evaluate(move, m);
         }
+        int current = 0;
 
+        // Switch to other player
         currentplayer = !currentplayer;
-        Move nextmove = new Move();
-        List<Piece> indexer = new List<Piece>();
-        foreach (Piece p in m.GetPiecesByBool(player))
+
+        // Generate all possible moves
+        List<Move> moves = m.GenerateAllMoves(currentplayer);
+
+        // Implementing move ordering
+        SimpleMoveOrdering(moves, m);
+
+        // Go over all the moves generated
+        foreach (Move nextmove in moves)
         {
-            indexer.Add(p);
-        }
-        for (int i = 0; i < indexer.Count; i++)
-        {
-            nextmove.pieceToMove = new Piece(indexer[i]);
-            nextmove.Child = new List<Move>();
-            m.FutureMovesImproved(nextmove);
-            foreach (Move after in nextmove.Child)
+            if (depth == searchDepth - 1 && nextmove.attack)
             {
-                var score = -pvSearch(after, -alpha - 1, -alpha, depth + 1, currentplayer, m);
-                m.UndoChangePosition(after);
-                if (alpha < score && score < beta)
+                current = QuietSearch(nextmove, 0, m);
+            }
+            else 
+            {
+                // Make possible move
+                m.MakeMove(nextmove);
+                // Continue down the search tree
+                current = -pvSearch(nextmove, -alpha - 1, -alpha, depth + 1, currentplayer, m);
+                // Undo move made
+                m.Undomove(nextmove);
+                // if the current score is 
+                if (alpha < current && current < beta)
                 {
-                    score = -pvSearch(after, -beta, -score, depth + 1, currentplayer, m);
-                    m.UndoChangePosition(after);
+                    m.MakeMove(nextmove);
+                    current = -pvSearch(nextmove, -beta, -current, depth + 1, currentplayer, m);
+                    m.Undomove(nextmove);
                 }
                 else
                 {
-                    score = -pvSearch(after, -beta, -alpha, depth + 1, currentplayer, m);
-                    m.UndoChangePosition(after);
+                    m.MakeMove(nextmove);
+                    current = -pvSearch(nextmove, -beta, -alpha, depth + 1, currentplayer, m);
+                    m.Undomove(nextmove);
                 }
-                alpha = max(alpha, score);
-                if (alpha >= beta)
-                {
-                    //m.UndoChangePosition(move);
-                    return alpha;
-                }
+            }
+
+
+
+            alpha = max(alpha, current);
+            if (alpha >= beta)
+            {
+                return alpha;
             }
         }
         return alpha;
+
     }
 
-    // This is liquid gold
+    // Trying out Quiescence search
+    private int QuietSearch(Move move, int depth, Model m) 
+    {
+        if (move.attack || depth == qsDepth || m.checkwin(move.pieceToMove.player)) 
+        {
+            return Evaluate(move, m);
+        }
+        Model temp = new Model(m);
+        return pvSearch(move, -1000, 1000, depth, move.pieceToMove.player, temp);
+    }
+
+    // fix this
     // For some reason in random some moves cause me to create insane amount of pieces in the temp module - FIX THIS
     public int RecursionEvaluate(Model m, int depth, Move current, int alpha, int beta, bool currentplayer)
     {
         // Make a move on the model - change bitboard and lists
-        m.MakeMove(current);
+        //m.MakeMove(current, depth);
         // Dont stop until you reach the desired deapth
         // (im subtructing one because one move deapth is preformed before the recurion)
-        if (depth == searchdepth - 1)
+        if (depth == searchDepth - 1)
         {
             return Evaluate(current, m);
         }
+        //lastmove = current;
         currentplayer = !currentplayer;
         if (currentplayer)
-        { beta = 10000;}
+        { beta = 10000; }
         else { alpha = -10000; }
         Move nextmove = new Move();
         List<Piece> indexer = new List<Piece>();
-        foreach (Piece p in m.GetPiecesByBool(player))
+        foreach (Piece p in m.GetPiecesByBool(currentplayer))
         {
             indexer.Add(p);
         }
@@ -138,12 +225,12 @@ public class AI
             nextmove.pieceToMove = new Piece(indexer[i]);
             nextmove.Child = new List<Move>();
             //nextmove.Child.AddRange(KillerMoves[depth]);
-            m.FutureMovesImproved(nextmove);
+            //m.FutureMovesImproved(nextmove);
             foreach (Move after in nextmove.Child)
             {
                 int score = RecursionEvaluate(m, depth + 1, after, alpha, beta, currentplayer);
                 m.UndoChangePosition(after);
-                if (player)
+                if (currentplayer)
                 {
                     beta = min(beta, score);
                     if (alpha >= beta)
@@ -161,52 +248,70 @@ public class AI
                 }
             }
         }
-        return player ? beta : alpha;
+        return currentplayer ? beta : alpha;
     }
 
-
-    public void aimove(Model m)
-    {
-        // Copy model so i can change it
-        Model temp = new Model(m);
-        Move bestmove = new Move();
-        bestmove.score = int.MinValue;
-        // Im using stopwatch to calculate the time spent on methods 
-        var StopWatch = System.Diagnostics.Stopwatch.StartNew();
-        // Go over all the pieces the ai holds (black)
-        foreach (Piece p in m.blacks)
-        {
-            // Copy the current piece since it will be changed
-            Piece save = new Piece(p);
-            Move move = new Move();
-            move.pieceToMove = p;
-            // Get the future possible moves for the current piece
-            temp.FutureMovesImproved(move);
-            foreach (Move nextmove in move.Child)
-            {
-                var current = pvSearch(nextmove, -1000, 1000, 0, !player, temp);
-                // Find the score given to this move
-                //var current = RecursionEvaluate(temp, 0, nextmove, -10000, 10000, !player);
-                // Save the move if its better score-wise
-                if (bestmove.score < current)
-                {
-                    bestmove.pieceToMove = save;
-                    bestmove = nextmove;
-                    bestmove.score = current;
-                }
-                // copy my model again
-                temp = new Model(m);
-            }
-        }
-        StopWatch.Stop();
-        var elapsedtime = StopWatch.ElapsedMilliseconds;
-        Debug.Log("ai move recursion duration : " + elapsedtime / 1000 + " seconds");
-        Debug.Log("Move made from square " + bestmove.pieceToMove.position + " to square " + bestmove.moveto);
-        // Make the move with my chosen move
-        actuallymove(bestmove);
-    }
 
     // ------------------------------- Evalution Methods -----------------------------------------
+
+
+    // Get a given model (in some point of time) and a move
+    // Determine score for the given state of game
+    public int Evaluate(Move move, Model m)
+    {
+        int score = 0;
+
+        // Average position of all the pieces with this color
+        Vector2Int avgpos = AvgPos(move.pieceToMove.player, m);
+
+        // Reward having less pieces then enemy
+        score += AmountOfPieces(move, m);
+
+        // Calculate ceter of mass of all ai pieces and reward being close to the middle
+        score += MiddleSquares(avgpos);
+
+        //// Punish backtracking moves
+        //score += MovePlayed(move);
+
+        // Trying out new things
+        score += SimpleStructureEval(avgpos, move, m);
+
+        //// Calculate the structure of my pieces
+        //score += StructureEvaluation(move, avgpos, m);
+
+        // Reward begin away from frame of board
+        score += BadSquares(move, m);
+
+        // If winning reward higeset number if losing punihs with lowest number
+        score += WinninOrLosing(move, m);
+
+        return score;
+        //return player ? -score : score;
+    }
+
+    // Get a move list 
+    // Give every move a score and sort them
+    public void SimpleMoveOrdering(List<Move> moves, Model m)
+    {
+        foreach (Move move in moves)
+        {
+            move.score = MiddleSquares(move.moveto) + AmountOfPieces(move, m) + BadSquares(move, m);
+        }
+        moves.Sort(delegate (Move p1, Move p2)
+        {
+            int compareScore = p1.score.CompareTo(p2.score);
+            return compareScore;
+        });
+    }
+
+    /*    // Get a move
+        // If move was last played punish ai
+        private int MovePlayed(Move move)
+        {
+            Move lastmove = move.pieceToMove.player ? LastWhiteMove : LastBlackMove;
+            return ((move.moveto == lastmove.pieceToMove.position) && (move.pieceToMove.position == lastmove.moveto)) ? -200 : 0;
+        }*/
+
 
     // Get a given model (in some point of time) and a move
     // Reward having fewer pieces than the enemy
@@ -219,92 +324,54 @@ public class AI
     // Reward begin away from frame of board
     private int BadSquares(Move move, Model m)
     {
-        return (move.moveto.x == 0 || move.moveto.y == 0 || move.moveto.x == 7 || move.moveto.y == 7) ? -9 : 0;
+        return (move.moveto.x == 0 || move.moveto.y == 0 || move.moveto.x == 7 || move.moveto.y == 7) ? -10 : 0;
+    }
+
+    private int SimpleStructureEval(Vector2Int avg, Move move, Model m)
+    {
+        return Math.Abs(CalcDistance(move.pieceToMove.position) - CalcDistance(avg)) * -2;
     }
 
     // Get a given model (in some point of time) and a move
-    // Evaluate the center of mass of the players pieces and reward being close to middle / punish being far
-    // O(2n) FOR n = amount of pieces for a player
-    // IDEA READ THIS IN THE FUTURE!
-    // MUY IMPORTANTE
-    // Currently not effective you could save center of mass on model and change it every move
-    private int StructureEvaluation(Move move, Model m)
+    // Evaluate the center of mass of the player's pieces
+    private int StructureEvaluation(Move move, Vector2Int avgpos, Model m)
     {
-        // Avg x and y of my pieces
-        int Myavgx = 0, Myavgy = 0;
-
-        // X and y of the furthest distance position from my center of mass
-        int Enemyavgx = 0, Enemyavgy = 0;
 
         // The furthest distance from the center of mass 
-        double Mymaxdist = -100, EnemyMaxdist = -100;
-
-        // Lists of both kinds of pieces
+        double Mymaxdist = -100;
+        // All the pieces of a certain color
         List<Piece> Mypieces = m.GetPiecesByBool(move.pieceToMove.player);
-        List<Piece> EnemyPieces = m.GetPiecesByBool(!move.pieceToMove.player);
-
-        // Go over all pieces and sum all x positions and y positions (both my pieces and enemys)
-        for (int i = 0; i < Mypieces.Count || i < EnemyPieces.Count; i++)
-        {
-            if (i < Mypieces.Count)
-            {
-                Myavgx += Mypieces[i].position.x;
-                Myavgy += Mypieces[i].position.y;
-            }
-            if (i < EnemyPieces.Count)
-            {
-                Enemyavgx += EnemyPieces[i].position.x;
-                Enemyavgy += EnemyPieces[i].position.y;
-
-            }
-        }
-
-        // Calculate average 
-        Myavgx /= m.GetPiecesByBool(move.pieceToMove.player).Count;
-        Myavgy /= m.GetPiecesByBool(move.pieceToMove.player).Count;
-        Enemyavgx /= m.GetPiecesByBool(!move.pieceToMove.player).Count;
-        Enemyavgy /= m.GetPiecesByBool(!move.pieceToMove.player).Count;
 
         // Go over all pieces and calculate distance of all x positions and y positions
         // Find and save the furthest distance
-        for (int i = 0; i < Mypieces.Count || i < EnemyPieces.Count; i++)
+        for (int i = 0; i < Mypieces.Count; i++)
         {
-            if (i < Mypieces.Count)
+            // Calculate distance of a piece from the average position
+            double distance = CalcDistance(Math.Abs(Mypieces[i].position.x - avgpos.x), Math.Abs(Mypieces[i].position.y - avgpos.y));
+            // Update if found a bigger distance
+            if (distance > Mymaxdist)
             {
-                double distance = Math.Abs(CalcDistance(Math.Abs(Mypieces[i].position.x - Myavgx), Math.Abs(Mypieces[i].position.y - Myavgy)));
-                if (distance > Mymaxdist)
-                {
-                    Mymaxdist = distance;
-                }
-            }
-            if (i < EnemyPieces.Count)
-            {
-                double distance = Math.Abs(CalcDistance(Math.Abs(EnemyPieces[i].position.x - Enemyavgx), Math.Abs(EnemyPieces[i].position.y - Enemyavgy)));
-                if (distance > EnemyMaxdist)
-                {
-                    EnemyMaxdist = distance;
-                }
-
+                Mymaxdist = distance;
             }
         }
 
         // Reward being close to the middle and reward having a closer formation (my max avg distance is lower then the enemeys)
-        return MiddleSquares(Myavgx, Myavgy) + EnemyMaxdist < Mymaxdist ? -7 : 7;
+        return -(int)Mymaxdist;
     }
 
-    // Utilty function
-    // Get the avg distance of a certain player (x, y) position of avg
+
+    // Get the avg position of a certain player
     // Evaluate distance from the middle of the board
-    private int MiddleSquares(int avgx, int avgy)
+    private int MiddleSquares(Vector2Int pos)
     {
         // Punish being far from the middle (squares (3,4) || (4,3) || (3,3) || (4,4))
-        int three = Math.Abs(avgx - 3) + Math.Abs(avgy - 3);
-        int four = Math.Abs(avgx - 4) + Math.Abs(avgy - 4);
-        int threefour = Math.Abs(avgx - 3) + Math.Abs(avgy - 4);
-        int fourthree = Math.Abs(avgx - 4) + Math.Abs(avgy - 3);
+        int three = CalcDistance(Math.Abs(pos.x - 3), Math.Abs(pos.y - 3));
+        int four = CalcDistance(Math.Abs(pos.x - 4), Math.Abs(pos.y - 4));
+        int threefour = CalcDistance(Math.Abs(pos.x - 3), Math.Abs(pos.y - 4));
+        int fourthree = CalcDistance(Math.Abs(pos.x - 4), Math.Abs(pos.y - 3));
 
         // Being far from the middle lowers ur score by how far u are (im choosing the closest option)
-        return -min(min(three, four), min(threefour, fourthree));
+        return max(max(three, four), max(threefour, fourthree) * -4);
     }
 
     // Get a given model (in some point of time) and a move
@@ -320,15 +387,6 @@ public class AI
 
     // -------------------------------- Utility Methods ------------------------------------------
 
-
-    // Get a move
-    // Actually make the move in the unity space
-    private void actuallymove(Move move)
-    {
-
-        controller.GetComponent<Game>().MoveAPieceInUnity(move);
-    }
-
     // Get 2 numbers and return the smaller one
     private int min(int a, int b)
     {
@@ -343,18 +401,49 @@ public class AI
 
     // Get and x and y index
     // Return distance 
-    private double CalcDistance(int x, int y)
+    private int CalcDistance(int x, int y)
     {
-        return Math.Sqrt(x ^ 2 + y ^ 2);
+        return (int)Math.Sqrt(x ^ 2 + y ^ 2);
     }
 
+    // Just the same function only with a vector
+    private int CalcDistance(Vector2Int pos)
+    {
+        return (int)Math.Sqrt(pos.x ^ 2 + pos.y ^ 2);
+    }
 
+    // Get a model
+    // Return the avg position for all the pieces of a certain color
+    private Vector2Int AvgPos(bool Myplayer, Model m)
+    {
+        // Avg x and y of my pieces
+        int Myavgx = 0, Myavgy = 0;
+        // Lists of both kinds of pieces
+        List<Piece> Mypieces = m.GetPiecesByBool(Myplayer);
+        List<Piece> EnemyPieces = m.GetPiecesByBool(!Myplayer);
 
+        // Go over all pieces and sum all x positions and y positions (both my pieces and enemys)
+        for (int i = 0; i < Mypieces.Count || i < EnemyPieces.Count; i++)
+        {
+            if (i < Mypieces.Count)
+            {
+                Myavgx += Mypieces[i].position.x;
+                Myavgy += Mypieces[i].position.y;
+            }
+        }
 
+        // Calculate average 
+        Myavgx /= m.GetPiecesByBool(Myplayer).Count;
+        Myavgy /= m.GetPiecesByBool(Myplayer).Count;
+        return new Vector2Int(Myavgx, Myavgy);
+    }
 
-
-
-
+    // Get a move
+    // Actually make the move in the unity space
+    private void actuallymove(Move move)
+    {
+        controller.GetComponent<Game>().MoveAPieceInUnity(move);
+    }
 
 
     //-------------------------- Past Versions (graveyard)----------------------------
@@ -536,8 +625,122 @@ public class AI
     //    return move.Child;
     //}
 
+    //private List<Move> GenerateMoves(List<Move> moves, Model m, int deapth)
+    //{
+    //    List<Move> sortedkillers = new List<Move>();
+    //    for (int i = 0; i < moves.Count; i++)
+    //    {
+    //        moves[i].score = Evaluate(moves[i], m);
+    //    }
+    //    moves.Sort(CompareTwoMoves);
+    //    return moves;
+    //}
+    //// Get a list of pieces and the model
+    //// Return a list of all the pieces of the current player
+    //private void AddAllPieces(List<Piece> indexer, Model m, bool currentplayer)
+    //{
+    //    foreach (Piece p in m.GetPiecesByBool(currentplayer))
+    //    {
+    //        indexer.Add(p);
+    //    }
+    //}
 
+    // Get a model
+    // Make an initial search and sent out the actual recursion
+    //public void aimove(Model m)
+    //{
+    //    // Copy model so i can change it
+    //    Model temp = new Model(m);
+    //    Move bestmove = new Move();
+    //    bestmove.score = int.MinValue;
+    //    // Im using stopwatch to calculate the time spent on methods 
+    //    var StopWatch = System.Diagnostics.Stopwatch.StartNew();
+    //    // Go over all the pieces the ai holds (black)
+    //    foreach (Piece p in m.blacks)
+    //    {
+    //        // Copy the current piece since it will be changed
+    //        Piece save = new Piece(p);
+    //        Move move = new Move();
+    //        move.pieceToMove = new Piece(p);
+    //        // Get the future possible moves for the current piece
+    //        //temp.FutureMovesImproved(move);
+    //        foreach (Move nextmove in move.Child)
+    //        {
+    //            temp.MakeMove(nextmove, 0);
+    //            //var current = pvSearch(nextmove, -1000, 1000, 0, false, temp);
+    //            var current = RecursionTest(0, false, temp);
 
+    //            // Find the score given to this move
+    //            //var current = RecursionEvaluate(temp, 0, nextmove, -10000, 10000, !player);
+    //            temp.UndoChangePosition(nextmove);
+    //            // Save the move if its better score-wise
+    //            if (bestmove.score < current)
+    //            {
+    //                bestmove.pieceToMove = save;
+    //                bestmove = nextmove;
+    //                bestmove.score = current;
+    //            }
+    //            // copy my model again
+    //            temp = new Model(m);
+    //        }
+    //    }
+    //    StopWatch.Stop();
+    //    var elapsedtime = StopWatch.ElapsedMilliseconds;
+    //    Debug.Log("ai move recursion duration : " + elapsedtime / 1000 + " seconds");
+    //    Debug.Log("Move made from square " + bestmove.pieceToMove.position + " to square " + bestmove.moveto);
+    //    // Make the move with my chosen move
+    //    actuallymove(bestmove);
+    //}
 
-
+    // Better Recursion to find best score using nega scout
+    //public int pvSearch(Move move, int alpha, int beta, int depth, bool currentplayer, Model m)
+    //{
+    //    m.MakeMove(move, depth);
+    //    if (depth == searchdepth - 1 || m.checkwin(move.pieceToMove.player))
+    //    {
+    //        return Evaluate(move, m);
+    //    }
+    //    if (currentplayer)
+    //    {
+    //        LastWhiteMove = move;
+    //    }
+    //    else
+    //    {
+    //        LastBlackMove = move;
+    //    }
+    //    currentplayer = !currentplayer;
+    //    Move nextmove = new Move();
+    //    List<Piece> indexer = new List<Piece>();
+    //    foreach (Piece p in m.GetPiecesByBool(currentplayer))
+    //    {
+    //        indexer.Add(p);
+    //    }
+    //    for (int i = 0; i < indexer.Count; i++)
+    //    {
+    //        nextmove.pieceToMove = new Piece(indexer[i]);
+    //        nextmove.Child = new List<Move>();
+    //       // m.FutureMovesImproved(nextmove);
+    //        foreach (Move after in nextmove.Child)
+    //        {
+    //            var score = -pvSearch(after, -alpha - 1, -alpha, depth + 1, currentplayer, m);
+    //            m.UndoChangePosition(after);
+    //            if (alpha < score && score < beta)
+    //            {
+    //                score = -pvSearch(after, -beta, -score, depth + 1, currentplayer, m);
+    //                m.UndoChangePosition(after);
+    //            }
+    //            else
+    //            {
+    //                score = -pvSearch(after, -beta, -alpha, depth + 1, currentplayer, m);
+    //                m.UndoChangePosition(after);
+    //            }
+    //            alpha = max(alpha, score);
+    //            if (alpha >= beta)
+    //            {
+    //                return alpha;
+    //            }
+    //        }
+    //    }
+    //    return alpha;
+    //}
 }

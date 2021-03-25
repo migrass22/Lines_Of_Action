@@ -87,13 +87,13 @@ public class LOAman : MonoBehaviour
         {
             DestroyMovePlates();
             Move move = new Move();
-            move.pieceToMove = p;
-            m.FutureMovesImproved(move);
+            m.FutureMovesImproved(p, move.Child);
             //m.PossibleMovesImproved(p);
             foreach (Move possiblemove in move.Child)
             {
                 MovePlateSpawn(possiblemove);
             }
+
         }
     }
 
@@ -132,7 +132,7 @@ public class LOAman : MonoBehaviour
             mpScript.attack = true;
         }
         mpScript.SetReference(gameObject);
-        mpScript.SetCoords(m.moveto.x, m.moveto.y);
+        mpScript.SetCoords(m.moveto);
         
     }
 
@@ -144,6 +144,8 @@ public class LOAman : MonoBehaviour
             Destroy(movePlates[i]);
         }
     }
+
+
 
     // ----------------------------------------------- GraveYard -------------------------------------------
     //private void LineMovePlate(Vector2Int dir)

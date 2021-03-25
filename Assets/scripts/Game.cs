@@ -7,6 +7,11 @@ using UnityEngine.UI;
 
 public class Game : MonoBehaviour
 {
+
+
+    // ------------------------------------------- Variables ----------------------------------------------------
+
+
     // Counter for amount of turns that passed
     private int turncounter = 0;
     // My Model to hold data and logical functions
@@ -15,11 +20,16 @@ public class Game : MonoBehaviour
     private bool currentplayer = true;
     // True = gameover
     private bool gameover = false;
+    // Prefab piece used to create the board
     public GameObject piece;
     // Change this to activate ai
     private bool ActivateAi;
 
-    // Start is called before the first frame update
+
+    // ------------------------------------------ View Methods --------------------------------------------------
+
+
+    // Start is called beforse the first frame update
     void Start()
     {
         InitializeGame();
@@ -28,7 +38,7 @@ public class Game : MonoBehaviour
     }
 
     // Restart the db and the pieces to be in the first positions again
-    public void CleanUp() 
+    public void CleanUp()
     {
         // Turn off all texts and restart the turn text to 0
         TurnOffTexts();
@@ -64,6 +74,7 @@ public class Game : MonoBehaviour
                            Create(true, 7, 4), Create(true, 7, 5), Create(true, 7, 6)});
     }
 
+
     // Add a new Piece to the board and activate it to show on screen, also create a Piece object and return it
     public Piece Create(bool player, int x, int y)
     {
@@ -95,16 +106,6 @@ public class Game : MonoBehaviour
         turncounter = 0;
         // Display first turn 
         NextTurn();
-    }
-
-    public bool GetCurrentPlayer() 
-    {
-        return currentplayer;
-    }
-
-    public bool IsGameOver() 
-    {
-        return gameover;
     }
 
     // Disable all texts and restart the turn text 
@@ -148,10 +149,11 @@ public class Game : MonoBehaviour
         GameObject.FindGameObjectWithTag("RestartText").GetComponent<Text>().text = "Press to restart";
     }
 
+
     // Get a Move
     // Move piece on screen and update all databases also remove a piece if it gets eaten
     // Also check for win and update messages if won game
-    public void MoveAPieceInUnity(Move move) 
+    public void MoveAPieceInUnity(Move move)
     {
         // Check if this move is an attacking one - if so remove the piece and update dbs
         AttackingPiece(move);
@@ -172,7 +174,25 @@ public class Game : MonoBehaviour
         }
     }
 
-    // -------------------------------- Utility Methods------------------------------------------
+
+    // ---------------------------------------- Getter and Setter -----------------------------------------------
+
+
+    // Get the current player 
+    public bool GetCurrentPlayer()
+    {
+        return currentplayer;
+    }
+
+    // Check if the game is over
+    public bool IsGameOver()
+    {
+        return gameover;
+    }
+
+
+    // ------------------------------------------- Core Methods-------------------------------------------------
+
 
     // Get a move and check if its attacking
     // If attackng remove the piece its attacking and update dbs
@@ -185,8 +205,6 @@ public class Game : MonoBehaviour
             Piece AfterPiece = model.GetPieceByIndex(move.moveto);
             // Remove the piece from lists in model
             model.RemovePiece(AfterPiece);
-            // Make a move that deletes the eaten piece from bitboards
-            model.board.MakeMove(AfterPiece.position, AfterPiece.position, !currentplayer);
             // Actually destroy said piece from board
             Destroy(AfterPiece.piece);
         }
@@ -197,7 +215,7 @@ public class Game : MonoBehaviour
     private void UpdateAllDbsAndPieces(Move move) 
     {
         // Piece to move
-        Piece BeforePiece = move.pieceToMove;
+        Piece BeforePiece = model.GetPieceByIndex(move.pieceToMove.position);
         // Shorten the things i need to write
         Vector2Int before = move.pieceToMove.position; 
         // Update array numbers and position of the pieces
@@ -226,11 +244,12 @@ public class Game : MonoBehaviour
             // Activate ai if ai mode is set
             if (!currentplayer && ActivateAi)
             {
-                AI ai = new AI();
-                ai.aimove(model);
+                AI ai = new AI(model);
+                ai.StartAi();
                 //ai.BetterAiMove(model);
             }
         }
     }
+
 }
 
