@@ -8,6 +8,12 @@ TagManager:
   - WinnerText
   - RestartText
   - TurnText
+  - PlayButton
+  - CheckBox
+  - PlayText
+  - TgTag
+  - RestartButton
+  - BoardSprite
   layers:
   - Default
   - TransparentFX

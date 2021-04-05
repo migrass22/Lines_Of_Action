@@ -38,6 +38,7 @@ public class MovePlate : MonoBehaviour
         // Find the piece im trying to move
         Piece BeforePiece = model.GetPieceByIndex(before);
         controller.GetComponent<Game>().MoveAPieceInUnity(new Move(BeforePiece, after, 0, attack));
+        controller.GetComponent<Game>().turnended = true;
     }
     
 

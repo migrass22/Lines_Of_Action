@@ -41,7 +41,7 @@ public class Move
     {
         this.moveto = new Vector2Int(0, 0);
         this.pieceToMove = null;
-        this.score = -300;
+        this.score = int.MinValue;
         this.attack = false;
         this.Child = new List<Move>(8);
     }
