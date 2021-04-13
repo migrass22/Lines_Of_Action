@@ -39,8 +39,8 @@ public class Game : MonoBehaviour
 
     // Depth for ai vs human
     private static int AivsHumanDepth = 4;
-    private static int AivsAiDepthb = 5;
-    private static int AivsAiDepthw = 1;
+    private static int AivsAiDepthb = 3;
+    private static int AivsAiDepthw = 2;
 
     float timeToTestSimpaleCube;
 
@@ -104,7 +104,11 @@ public class Game : MonoBehaviour
                     {
                         ai.mainModel = model;
                         ai.StartAi();
+                        turncounter++;
+
                         currentplayer = !currentplayer;
+                        // Update the turn counter
+                        UpdateTurns();
                     }
                     turnended = false;
                     stopwatch.Stop();
@@ -308,12 +312,15 @@ public class Game : MonoBehaviour
             {
                 Tie();
             }
-            else 
+            else
             {
                 // Player won so end the game and show winner message
                 Winner(currentplayer);
             }
-
+        }
+        else if(model.checkwin(!currentplayer))
+        {
+            Winner(!currentplayer);
         }
     }
 

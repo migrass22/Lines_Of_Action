@@ -40,6 +40,8 @@ public class AI
     // Just the model of the game
     public Model mainModel;
 
+    private int turncounter = 1;
+
     // Controller for the game
     GameObject controller = GameObject.FindGameObjectWithTag("GameController");
 
@@ -53,13 +55,10 @@ public class AI
     public bool player;
 
     // Static variable for evaluate functions
-    private const int MyGroupScoreMultiplier = 40;
-    private const int EnemyGroupScoreMultiplier = 35;
-    private const int MyPositionMultiplier = 25;
-
-    // Last moves
-    private Move LastWhiteMove;
-    private Move LastBlackMove;
+    private const int MyGroupScoreMultiplier = 10;
+    private const int EnemyGroupScoreMultiplier = 5;
+    private const int MyPositionMultiplier = 1500;
+    private int positions = 0;
 
     // Constructor for the ai
     public AI(Model m, bool player, int searchdepth)
@@ -77,7 +76,7 @@ public class AI
         {
             for (int j = 0; j < 8; j++)
             {
-                DistanceArray[TurnPosToIndex(new Vector2Int(j,i))] = CalcDistance(new Vector2Int(j,i));
+                DistanceArray[TurnPosToIndex(new Vector2Int(j,i))] = (int)Math.Sqrt((double)CalcDistance(new Vector2Int(j,i)));
             }
         }
     }
@@ -92,8 +91,16 @@ public class AI
     // Base function to start the ai and make a move
     public void StartAi()
     {
+        positions = 0;
+
         // Variable to save the best move made
         Move bestMove = new Move();
+        if (searchDepth % 2 == 0) 
+        {
+            bestMove.score = -10000;
+        }
+        else { bestMove.score = 10000; }
+
 
         // Current score of the move
         int current = 0;
@@ -115,29 +122,45 @@ public class AI
             // make the move on the model
             temp.MakeMove(move);
 
-            // send recursion to evaluate final nodes
-            current = pvSearch(move, -1000, 1000, 0, player, temp) - MovePlayed(move) + move.score;
+            //current = -NegaMax(-10000, 10000, !player, 0, move, temp);
+
+            current = -NegaScout(-10000, 10000, !player, 0, move, temp);
+
             // undo the move
             temp.Undomove(move);
 
-            // If the current move is better then the best one yet than save it
-            if (current > bestMove.score)
+            if (searchDepth % 2 == 0)
             {
-
-                bestMove = new Move(move);
-                bestMove.score += current;
+                // If the current move is better then the best one yet than save it
+                if (current > bestMove.score)
+                {
+                    bestMove = new Move(move);
+                    bestMove.score = current;
+                }
             }
+            else 
+            {
+                // If the current move is better then the best one yet than save it
+                if (current < bestMove.score)
+                {
+                    bestMove = new Move(move);
+                    bestMove.score = current;
+                }
+            }
+
+
+
         }
         stopwatch.Stop();
         // Document for future improvment
         Debug.Log("Time spent deciding the move - " + stopwatch.ElapsedMilliseconds / 1000 + " seconds" + "\n Current depth - " + searchDepth);
         Debug.Log("Move made - " + bestMove);
 
-        if (player)
-            LastWhiteMove = bestMove;
-        else
-            LastBlackMove = bestMove;
-
+        //if (player)
+        //    LastWhiteMove = bestMove;
+        //else
+        //    LastBlackMove = bestMove;
+        Debug.Log("amount of postions " + positions);
         // Actually make a move 
         actuallymove(bestMove);
     }
@@ -175,19 +198,15 @@ public class AI
         return current;
     }
 
-    // Try #2 negascout
-    private int pvSearch(Move move, int alpha, int beta, int depth, bool currentplayer, Model m)
+    // Try #3 on negascout recursion -> (no evaluate) depth 4 = <1 sec | d 5 = 5 sec | d 6 = 20 sec 1,520,000 positions searched
+    private int NegaScout(int alpha, int beta, bool currentplayer, int depth, Move move, Model m)
     {
-
-        // If im at a leaf node or game has ended go back
         if (depth == searchDepth - 1 || m.checkwin(currentplayer))
         {
-            return Evaluate(move, m);
+            return Evaluate(currentplayer, m);
         }
-        int current = 0;
-
-        // Switch to other player
-        currentplayer = !currentplayer;
+        bool flag = true;
+        int eval = -10000;
 
         // Generate all possible moves
         List<Move> moves = m.GenerateAllMoves(currentplayer);
@@ -195,46 +214,76 @@ public class AI
         // Implementing move ordering
         SimpleMoveOrdering(moves, currentplayer, m);
 
-
         // Go over all the moves generated
         foreach (Move nextmove in moves)
         {
-
-            if (depth == searchDepth - 1 && nextmove.attack)
+            if (flag)
             {
-                current = QuietSearch(nextmove, 0, m);
-            }
-            else
-            {
-                // Make possible move
+                flag = false;
                 m.MakeMove(nextmove);
-                // Continue down the search tree
-                current = -pvSearch(nextmove, -alpha - 1, -alpha, depth + 1, currentplayer, m);
-                // Undo move made
+                eval = -NegaScout(-beta, -alpha, !currentplayer, depth + 1, nextmove, m);
                 m.Undomove(nextmove);
+            }
+            else 
+            {
+                m.MakeMove(nextmove);
+                //var cur = -NegaScout(-(alpha + 1) ,- alpha , !currentplayer, depth + 1, nextmove, m);
+                eval = -NegaScout(-(alpha + 1), -alpha, !currentplayer, depth + 1, nextmove, m);
+                m.Undomove(nextmove);
+
                 // if the current score is 
-                if (alpha < current && current < beta)
+                if (alpha < eval && eval < beta)
                 {
                     m.MakeMove(nextmove);
-                    current = -pvSearch(nextmove, -beta, -current, depth + 1, currentplayer, m);
-                    m.Undomove(nextmove);
-                }
-                else
-                {
-                    m.MakeMove(nextmove);
-                    current = -pvSearch(nextmove, -beta, -alpha, depth + 1, currentplayer, m);
+                    eval = -NegaScout(-beta, -eval, !currentplayer, depth + 1, nextmove, m);
                     m.Undomove(nextmove);
                 }
             }
 
-            alpha = max(alpha, current);
+            positions++;
+            alpha = max(eval, alpha);
             if (alpha >= beta)
             {
                 return alpha;
             }
         }
-        return alpha;
 
+        return alpha;
+    }
+
+    // Try #1 on negamax recrsion -> (no evaluate ) depth 4 = <1 sec | d 5 5 = 6 sec | d 6 = 21 sec 1,600,000 positions searched
+    private int NegaMax(int alpha, int beta, bool currentplayer, int depth, Move move, Model m)
+    {
+        positions++;
+        if (depth == searchDepth - 1 || m.checkwin(currentplayer) || m.checkwin(!currentplayer))
+        {
+             return Evaluate(currentplayer, m);
+        }
+
+        int eval = -10000;
+
+        // Generate all possible moves
+        List<Move> moves = m.GenerateAllMoves(currentplayer);
+
+        // Implementing move ordering
+        SimpleMoveOrdering(moves, currentplayer, m);
+
+        // Go over all the moves generated
+        foreach (Move nextmove in moves)
+        {
+
+            m.MakeMove(nextmove);
+
+            eval = max(eval, -NegaMax(-beta, -alpha, !currentplayer, depth + 1, nextmove, m));
+            m.Undomove(nextmove);
+            alpha = max(alpha, eval);
+            if (alpha >= beta)
+            {
+                break;
+            }
+        }
+
+        return eval;
     }
 
     // Trying out Quiescence search
@@ -242,10 +291,10 @@ public class AI
     {
         if (move.attack || depth == qsDepth || m.checkwin(move.pieceToMove.player))
         {
-            return Evaluate(move, m);
+            return Evaluate(move.pieceToMove.player, m);
         }
         Model temp = new Model(m);
-        return pvSearch(move, -1000, 1000, depth, move.pieceToMove.player, temp);
+        return NegaScout(-1000, 1000, move.pieceToMove.player, depth, move,temp);
     }
 
     // fix this
@@ -258,7 +307,7 @@ public class AI
         // (im subtructing one because one move deapth is preformed before the recurion)
         if (depth == searchDepth - 1)
         {
-            return Evaluate(current, m);
+            return Evaluate(current.pieceToMove.player, m);
         }
         //lastmove = current;
         currentplayer = !currentplayer;
@@ -308,24 +357,23 @@ public class AI
 
     // Get a given model (in some point of time) and a move
     // Determine score for the given state of game
-    public int Evaluate(Move move, Model m) 
+    public int Evaluate(bool player, Model m) 
     {
         int score = 0;
 
         // Turn saved average position into its actuall value (currently the sum of all positions)
-        Vector2Int avgpos = m.GetCurrentAvg(move.pieceToMove.player) / m.GetPiecesByBool(move.pieceToMove.player).Count;
+        Vector2Int avgpos = m.GetCurrentAvg(player) / m.GetPiecesByBool(player).Count;
 
-        // Give a score based on the amount of groups the current player has
-        score += GroupScore(move.pieceToMove.player, move, m);
+        //// Give a score based on the amount of groups the current player has
+        //score += GroupScore(player, player, m);
 
-        // Give a score based on the amount of groups the enemy player has (subtract the amount of groups enemy has)
-        score -= GroupScore(!move.pieceToMove.player, move, m);
+        //// Give a score based on the amount of groups the enemy player has (subtract the amount of groups enemy has)
+        //score -= GroupScore(!player, player, m);
 
-        // Give a score based on the distance of the last move from the center of mass (closer = better)
-        score += CloserToAvg(avgpos, move);
+        score += SimpleWinningLosing(player, m);
 
-        // Give score base on the avg position and how close it is to the middle
-        score += MiddleSquares(avgpos);
+        // Better position is a position where the hezion is closest to the avg position
+        score += SumOfDistances(avgpos, player, m);
 
         return score;
     }
@@ -334,18 +382,15 @@ public class AI
     // Give every move a score and sort them
     public void SimpleMoveOrdering(List<Move> moves, bool player, Model m)
     {
-        //int middlesquares = MiddleSquares(m.GetCurrentAvg(player));
+        int middlesquares = MiddleSquares(m.GetCurrentAvg(player));
         foreach (Move move in moves)
         {
             Vector2Int avgpos = m.GetCurrentAvg(move.pieceToMove.player) / m.GetPiecesByBool(move.pieceToMove.player).Count;
             move.score += CloserToAvg(avgpos, move);
-            move.score += MiddleSquares(avgpos);
-
-            //move.score += GroupScore(move.pieceToMove.player, move, m);
+            move.score += middlesquares;
+            move.score -= BadSquares(move.moveto);
+            ////move.score += GroupScore(move.pieceToMove.player, move, m);
             //move.score = Evaluate(move, m);
-            //move.score += CloserToAvg(m.GetCurrentAvg(player), move);
-            //move.score *= move.attack ? 2 : 1;
-            //move.score = middlesquares - BadSquares(move.moveto);
         }
         moves.Sort(delegate (Move p1, Move p2)
         {
@@ -358,19 +403,26 @@ public class AI
     // Return a score based on the distance of the given move from the average position
     private int CloserToAvg(Vector2Int avg, Move move)
     {
-        //return CalcDistanceBetween2Points(avg, move.moveto) ;
         Vector2Int minus = avg - move.moveto;
         minus.x = Math.Abs(minus.x);
         minus.y = Math.Abs(minus.y);
-        double score = (1 / DistanceArray[TurnPosToIndex(minus)]) * MyPositionMultiplier;
-        return (int)score;
+        return (int)(1 / DistanceArray[TurnPosToIndex(minus)]) * MyPositionMultiplier;
+    }
+
+    // Get an average position and a move
+    // Return a score based on the distance of the given move from the average position
+    private int SumOfDistances(Vector2Int avg, bool player, Model m)
+    {
+        double sumofdistances = GetSumOfDistances(m,avg, player);
+
+        return (int)((1 / sumofdistances) * MyPositionMultiplier);
     }
 
     // Get a player, a move and a model 
     // Count the amount of groups on the board using bit board and return score based on amount (1 group is a win)
-    private int GroupScore(bool player, Move move, Model m)
+    private int GroupScore(bool player, bool currentplayer, Model m)
     {
-        int amountOfGroups = 0;
+        double amountOfGroups = 0;
         m.board.InitCheckedThis();
         // If the number of any players piece is 1 than the game is finished
         if (m.GetPiecesByBool(player).Count == 1) { return 10000; }
@@ -392,10 +444,10 @@ public class AI
 
         if (amountOfGroups == 1)
         {
-            return 10000;
+            return -10000;
         }
         
-        double score = player == move.pieceToMove.player ? 1 / amountOfGroups * MyGroupScoreMultiplier : 1 / amountOfGroups * EnemyGroupScoreMultiplier;
+          double score = player == currentplayer ? 1 / amountOfGroups * MyGroupScoreMultiplier : 1 / amountOfGroups * EnemyGroupScoreMultiplier;
 
         return (int)score;
     }
@@ -411,20 +463,20 @@ public class AI
     // Reward begin away from frame of board
     private int BadSquares(Vector2Int moveto)
     {
-        return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 7 : 0;
+        return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 10 : 0;
     }
 
     // Get a move
     // If move was last played punish ai
-    private int MovePlayed(Move move)
-    {
-        if (GetMyLastMove() != null)
-        {
-            Move lastmove = move.pieceToMove.player ? LastWhiteMove : LastBlackMove;
-            return ((move.moveto == lastmove.pieceToMove.position) && (move.pieceToMove.position == lastmove.moveto)) ? 15 : 0;
-        }
-        return 0;
-    }
+    //private int MovePlayed(Move move)
+    //{
+    //    if (GetMyLastMove() != null)
+    //    {
+    //        Move lastmove = move.pieceToMove.player ? LastWhiteMove : LastBlackMove;
+    //        return ((move.moveto == lastmove.pieceToMove.position) && (move.pieceToMove.position == lastmove.moveto)) ? 15 : 0;
+    //    }
+    //    return 0;
+    //}
 
     // Get the avg position of a certain player
     // Evaluate distance from the middle of the board
@@ -547,6 +599,22 @@ public class AI
         return a < b ? b : a;
     }
 
+    private int GetSumOfDistances(Model m, Vector2Int avg, bool player) 
+    {
+        int i = 0;
+        int sum = 0;
+        foreach (Piece p in m.GetPiecesByBool(player)) 
+        {
+            Vector2Int minus = avg - p.position;
+            minus.x = Math.Abs(minus.x);
+            minus.y = Math.Abs(minus.y);
+            sum += DistanceArray[TurnPosToIndex(minus)];
+            i++;
+        }
+
+        return sum;
+    }
+
     // Get and x and y index
     // Return distance 
     private int CalcDistance(int x, int y)
@@ -603,11 +671,7 @@ public class AI
     private void actuallymove(Move move)
     {
         controller.GetComponent<Game>().MoveAPieceInUnity(move);
-    }
-
-    private Move GetMyLastMove() 
-    {
-        return player ? LastWhiteMove : LastBlackMove;
+        turncounter++;
     }
 
     //-------------------------- Past Versions (graveyard)----------------------------
@@ -944,5 +1008,66 @@ public class AI
     //        }
     //    }
     //    return alpha;
+    //}
+    // Try #2 negascout
+    //private int pvSearch(Move move, int alpha, int beta, int depth, bool currentplayer, Model m)
+    //{
+
+    //    // If im at a leaf node or game has ended go back
+    //    if (depth == searchDepth - 1 || m.checkwin(currentplayer))
+    //    {
+    //        return Evaluate(move, m);
+    //    }
+    //    int current = 0;
+    //    // Switch to other player
+    //    currentplayer = !currentplayer;
+
+    //    // Generate all possible moves
+    //    List<Move> moves = m.GenerateAllMoves(currentplayer);
+
+    //    // Implementing move ordering
+    //    SimpleMoveOrdering(moves, currentplayer, m);
+
+
+    //    // Go over all the moves generated
+    //    foreach (Move nextmove in moves)
+    //    {
+
+    //        if (depth == searchDepth - 1 && nextmove.attack)
+    //        {
+    //            current = QuietSearch(nextmove, 0, m);
+    //        }
+    //        else
+    //        {
+    //            positions++;
+    //            // Make possible move
+    //            m.MakeMove(nextmove);
+    //            // Continue down the search tree
+    //            current = -pvSearch(nextmove, -alpha - 1, -alpha, depth + 1, currentplayer, m);
+    //            // Undo move made
+    //            m.Undomove(nextmove);
+    //            // if the current score is 
+    //            if (alpha < current && current < beta)
+    //            {
+    //                m.MakeMove(nextmove);
+    //                current = -pvSearch(nextmove, -beta, -current, depth + 1, currentplayer, m);
+    //                m.Undomove(nextmove);
+    //            }
+    //            else
+    //            {
+    //                m.MakeMove(nextmove);
+    //                current = -pvSearch(nextmove, -beta, -alpha, depth + 1, currentplayer, m);
+    //                m.Undomove(nextmove);
+    //            }
+    //        }
+
+    //        alpha = max(alpha, current);
+    //        if (alpha >= beta)
+    //        {
+    //            return alpha;
+    //        }
+    //    }
+    //    return alpha;
+
     //}
 }

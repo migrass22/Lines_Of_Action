@@ -37,8 +37,10 @@ public class Piece
     }
 
     // ----------------------------------------------- Utility ---------------------------------------------
+
     public override string ToString()
     {
         return this.position.ToString() + this.player.ToString();
     }
+
 }
