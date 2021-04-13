@@ -38,7 +38,9 @@ public class Game : MonoBehaviour
     public static string mode;
 
     // Depth for ai vs human
-    private static int AivsHumanDepth = 3;
+    private static int AivsHumanDepth = 4;
+    private static int AivsAiDepthb = 5;
+    private static int AivsAiDepthw = 1;
 
     float timeToTestSimpaleCube;
 
@@ -55,9 +57,6 @@ public class Game : MonoBehaviour
         ActivateOption(mode);
         InitializeGame();
     }
-
-
-
     private void Update()
     {
         
@@ -135,9 +134,9 @@ public class Game : MonoBehaviour
             case "PureAi":
                 currentai = true;
                 ActivateBlackAi = true;
-                ai = new AI(model, currentai, 3);
+                ai = new AI(model, currentai, AivsAiDepthw);
                 ActivateWhiteAi = true;
-                otherai = new AI(model, !currentai, 3);
+                otherai = new AI(model, !currentai, AivsAiDepthb);
                 break;
             // Ai vs human player
             case "AIvsHuman":

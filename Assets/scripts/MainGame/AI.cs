@@ -6,28 +6,36 @@ using UnityEngine;
 using UnityEngine.Profiling;
 public class AI
 {
-    /* To do:
-    // 1. function to copy the current model into a temporary one -> saving only vector2int for positions V
-    // 2. using that new model make moves using the function u already have to find the best move V MADE EVEN BETTER
-    // 2.5 first move is easy second move by the other player should lower the score of the first move V
-    // 3. orgenize please tom ffs
-    // Figure out how to save moves VX
-    // 4. save avg pos and change it every move - makes moves at depth 4 2 seconds long
+
+    /*    To do:
+         1. function to copy the current model into a temporary one -> saving only vector2int for positions V
+         2. using that new model make moves using the function u already have to find the best move V MADE EVEN BETTER
+         2.5 first move is easy second move by the other player should lower the score of the first move V
+         3. orgenize please tom ffs
+         Figure out how to save moves VX
+         4. save avg pos and change it every move - makes moves at depth 4 2 seconds long
 
 
-    // Currently depth = 4  ttm -> 66 sec
-    //                      w/o eval -> ttm -> 50 sec
-    // UPGRADE GOT TO DEPTH 
+         Currently depth = 4  ttm -> 66 sec
+                              w/o eval -> ttm -> 50 sec
+         UPGRADE GOT TO DEPTH 
 
-    // UNDERSTAND HOW TO LOWER THE RECURSION TIME
-    // (KILLER HEURISTIC?)
+         UNDERSTAND HOW TO LOWER THE RECURSION TIME
+         (KILLER HEURISTIC?)*/
 
     // -------------------------------- Variables---------------------------------------
 
-    // The controller for the game*/
+    // The controller for the game
+
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // Get hezion - avg to actually calculate better position after a number of moves
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     //// Trying out transposition table
     //Hashtable transposition = new Hashtable();
+
+    // Trying out dictionary
+    private int[] DistanceArray = new int[64];
 
     // Just the model of the game
     public Model mainModel;
@@ -45,7 +53,9 @@ public class AI
     public bool player;
 
     // Static variable for evaluate functions
-    private const int GroupScoreMultiplier = 20;
+    private const int MyGroupScoreMultiplier = 40;
+    private const int EnemyGroupScoreMultiplier = 35;
+    private const int MyPositionMultiplier = 25;
 
     // Last moves
     private Move LastWhiteMove;
@@ -57,6 +67,26 @@ public class AI
         this.player = player;
         this.searchDepth = searchdepth;
         this.mainModel = new Model(m);
+        BuildDistanceArr();
+    }
+
+    // Build distance array based on vectors
+    private void BuildDistanceArr() 
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                DistanceArray[TurnPosToIndex(new Vector2Int(j,i))] = CalcDistance(new Vector2Int(j,i));
+            }
+        }
+    }
+
+    // Get a position on a board
+    // return the index it will have on the board
+    private int TurnPosToIndex(Vector2Int pos) 
+    {
+        return pos.x + pos.y * 8;
     }
 
     // Base function to start the ai and make a move
@@ -111,7 +141,6 @@ public class AI
         // Actually make a move 
         actuallymove(bestMove);
     }
-
 
 
     // --------------------------------------------- recursions ------------------------------------------------------------------------------
@@ -295,6 +324,9 @@ public class AI
         // Give a score based on the distance of the last move from the center of mass (closer = better)
         score += CloserToAvg(avgpos, move);
 
+        // Give score base on the avg position and how close it is to the middle
+        score += MiddleSquares(avgpos);
+
         return score;
     }
 
@@ -302,14 +334,14 @@ public class AI
     // Give every move a score and sort them
     public void SimpleMoveOrdering(List<Move> moves, bool player, Model m)
     {
-        int middlesquares = MiddleSquares(m.GetCurrentAvg(player));
+        //int middlesquares = MiddleSquares(m.GetCurrentAvg(player));
         foreach (Move move in moves)
         {
             Vector2Int avgpos = m.GetCurrentAvg(move.pieceToMove.player) / m.GetPiecesByBool(move.pieceToMove.player).Count;
-            avgpos.x = Math.Abs(avgpos.x);
-            avgpos.y = Math.Abs(avgpos.y);
-            move.score = CloserToAvg(avgpos, move);
+            move.score += CloserToAvg(avgpos, move);
+            move.score += MiddleSquares(avgpos);
 
+            //move.score += GroupScore(move.pieceToMove.player, move, m);
             //move.score = Evaluate(move, m);
             //move.score += CloserToAvg(m.GetCurrentAvg(player), move);
             //move.score *= move.attack ? 2 : 1;
@@ -330,60 +362,20 @@ public class AI
         Vector2Int minus = avg - move.moveto;
         minus.x = Math.Abs(minus.x);
         minus.y = Math.Abs(minus.y);
-        double score = (1 / CalcDistance(minus)) * 10;
+        double score = (1 / DistanceArray[TurnPosToIndex(minus)]) * MyPositionMultiplier;
         return (int)score;
-    }
-
-    // Get a move and a model and try to score the connectivity of the pieces of the moving piece
-    private int ConnectivityScore(Move move, Model m) 
-    {
-        int max = 0;
-        int number = 0;
-        int amountOfGroups = 0;
-        m.board.InitCheckedThis();
-        // If the number of any players piece is 1 than the game is finished
-        if (m.GetPiecesByBool(move.pieceToMove.player).Count == 1) { return 10000; }
-        // Go over the pieces of the player im checking
-        foreach (Piece p in m.GetPiecesByBool(move.pieceToMove.player))
-        {
-            // Save the current pieces position and the corrospondaning index
-            Vector2Int pos = p.position;
-            int index = m.board.PositionToIndex(pos);
-            // Check if said position hasnt been checked before
-            if ((m.board.checkedthis & m.board.TurnIndexToBitBoard(index)) == 0)
-            {
-                // Find the amount of of adjacent of pieces
-                number = m.board.FindLines(index, move.pieceToMove.player);
-                // amount of times i run the search is amount of groups
-                amountOfGroups++;
-                // If the number is bigger than saved max than change it
-                if (max < number)
-                {
-                    max = number;
-                    if (max == m.GetPiecesByBool(move.pieceToMove.player).Count)
-                    { 
-                        return max + amountOfGroups*-2;
-                    }
-
-                }
-
-            }
-        }
-        return max;
-
     }
 
     // Get a player, a move and a model 
     // Count the amount of groups on the board using bit board and return score based on amount (1 group is a win)
     private int GroupScore(bool player, Move move, Model m)
     {
-        int number = 0;
         int amountOfGroups = 0;
         m.board.InitCheckedThis();
         // If the number of any players piece is 1 than the game is finished
-        if (m.GetPiecesByBool(player).Count == 1) { return 1000; }
+        if (m.GetPiecesByBool(player).Count == 1) { return 10000; }
         // Go over the pieces of the player im checking
-        foreach (Piece p in m.GetPiecesByBool(move.pieceToMove.player))
+        foreach (Piece p in m.GetPiecesByBool(player))
         {
             // Save the current pieces position and the corrospondaning index
             Vector2Int pos = p.position;
@@ -392,7 +384,7 @@ public class AI
             if ((m.board.checkedthis & m.board.TurnIndexToBitBoard(index)) == 0)
             {
                 // Find the amount of of adjacent of pieces
-                number = m.board.FindLines(index, move.pieceToMove.player);
+                var number = m.board.FindLines(index, player);
                 // amount of times i run the search is amount of groups
                 amountOfGroups++;
             }
@@ -400,10 +392,11 @@ public class AI
 
         if (amountOfGroups == 1)
         {
-            return 1000;
+            return 10000;
         }
+        
+        double score = player == move.pieceToMove.player ? 1 / amountOfGroups * MyGroupScoreMultiplier : 1 / amountOfGroups * EnemyGroupScoreMultiplier;
 
-        double score = 1 / amountOfGroups * GroupScoreMultiplier;
         return (int)score;
     }
 
@@ -439,9 +432,9 @@ public class AI
     {
         if ((pos.x == 3 || pos.x == 4 )&&(pos.y == 3|| pos.y ==4)) 
         {
-            return 7;
+            return 10;
         }
-        return 1;
+        return 0;
     }
 
     // Get a given model (in some point of time) and a move
@@ -501,6 +494,45 @@ public class AI
         return -(int)Mymaxdist;
     }
 
+    // Get a move and a model and try to score the connectivity of the pieces of the moving piece
+    private int ConnectivityScore(Move move, Model m)
+    {
+        int max = 0;
+        int number = 0;
+        int amountOfGroups = 0;
+        m.board.InitCheckedThis();
+        // If the number of any players piece is 1 than the game is finished
+        if (m.GetPiecesByBool(move.pieceToMove.player).Count == 1) { return 10000; }
+        // Go over the pieces of the player im checking
+        foreach (Piece p in m.GetPiecesByBool(move.pieceToMove.player))
+        {
+            // Save the current pieces position and the corrospondaning index
+            Vector2Int pos = p.position;
+            int index = m.board.PositionToIndex(pos);
+            // Check if said position hasnt been checked before
+            if ((m.board.checkedthis & m.board.TurnIndexToBitBoard(index)) == 0)
+            {
+                // Find the amount of of adjacent of pieces
+                number = m.board.FindLines(index, move.pieceToMove.player);
+                // amount of times i run the search is amount of groups
+                amountOfGroups++;
+                // If the number is bigger than saved max than change it
+                if (max < number)
+                {
+                    max = number;
+                    if (max == m.GetPiecesByBool(move.pieceToMove.player).Count)
+                    {
+                        return max + amountOfGroups * -2;
+                    }
+
+                }
+
+            }
+        }
+        return max;
+
+    }
+
     // -------------------------------- Utility Methods ------------------------------------------
 
     // Get 2 numbers and return the smaller one
@@ -519,18 +551,18 @@ public class AI
     // Return distance 
     private int CalcDistance(int x, int y)
     {
-        return (int)Math.Sqrt(x ^ 2 + y ^ 2);
+        return (int)(Math.Pow((double)x, 2) + Math.Pow((double)y, 2));
     }
 
     // Just the same function only with a vector
     private int CalcDistance(Vector2Int pos)
     {
-        int score = 0;
-        if ((score = (int)(pos.x ^ 2 + pos.y ^ 2)) == 0) 
+        int dist = 0;
+        if ((dist = (int)(Math.Pow((double)pos.x, 2) + Math.Pow((double)pos.y, 2))) == 0) 
         {
             return 1;
         }
-        return score;
+        return dist;
     }
 
     // Get and x and y index
