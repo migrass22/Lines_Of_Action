@@ -44,11 +44,12 @@ public class AI
     // What player the ai is playing as
     public bool player;
 
+    // Static variable for evaluate functions
+    private const int GroupScoreMultiplier = 20;
+
     // Last moves
     private Move LastWhiteMove;
     private Move LastBlackMove;
-    
-   
 
     // Constructor for the ai
     public AI(Model m, bool player, int searchdepth)
@@ -92,7 +93,7 @@ public class AI
             // If the current move is better then the best one yet than save it
             if (current > bestMove.score)
             {
-                
+
                 bestMove = new Move(move);
                 bestMove.score += current;
             }
@@ -163,7 +164,7 @@ public class AI
         List<Move> moves = m.GenerateAllMoves(currentplayer);
 
         // Implementing move ordering
-        SimpleMoveOrdering(moves, currentplayer,m);
+        SimpleMoveOrdering(moves, currentplayer, m);
 
 
         // Go over all the moves generated
@@ -174,7 +175,7 @@ public class AI
             {
                 current = QuietSearch(nextmove, 0, m);
             }
-            else 
+            else
             {
                 // Make possible move
                 m.MakeMove(nextmove);
@@ -208,9 +209,9 @@ public class AI
     }
 
     // Trying out Quiescence search
-    private int QuietSearch(Move move, int depth, Model m) 
+    private int QuietSearch(Move move, int depth, Model m)
     {
-        if (move.attack || depth == qsDepth || m.checkwin(move.pieceToMove.player)) 
+        if (move.attack || depth == qsDepth || m.checkwin(move.pieceToMove.player))
         {
             return Evaluate(move, m);
         }
@@ -278,37 +279,21 @@ public class AI
 
     // Get a given model (in some point of time) and a move
     // Determine score for the given state of game
-    public int Evaluate(Move move, Model m)
+    public int Evaluate(Move move, Model m) 
     {
-        int score = 1;
-        int amount = m.GetPiecesByBool(move.pieceToMove.player).Count;
-        // Average position of all the pieces with this color
-        Vector2Int avgpos = m.GetCurrentAvg(move.pieceToMove.player);
-        avgpos.x /= amount;
-        avgpos.y /= amount;
+        int score = 0;
 
-        //score += SimpleWinningLosing(move.pieceToMove.player, m);
+        // Turn saved average position into its actuall value (currently the sum of all positions)
+        Vector2Int avgpos = m.GetCurrentAvg(move.pieceToMove.player) / m.GetPiecesByBool(move.pieceToMove.player).Count;
 
-        // Reward having less pieces then enemy
-        //score += AmountOfPieces(move, m);
+        // Give a score based on the amount of groups the current player has
+        score += GroupScore(move.pieceToMove.player, move, m);
 
-        //Calculate ceter of mass of all ai pieces and reward being close to the middle
-        score += MiddleSquares(move.moveto);
+        // Give a score based on the amount of groups the enemy player has (subtract the amount of groups enemy has)
+        score -= GroupScore(!move.pieceToMove.player, move, m);
 
-        //// Trying out new things
-        //score += CloserToAvg(avgpos, move);
-
-        // Favoring attack for now 
-        if (move.attack) 
-        {
-            score *= 2;
-        }
-
-        // Reward begin away from frame of board
-        score -= BadSquares(move.moveto);
-
-        //// If winning reward higeset number if losing punihs with lowest number
-        //score += WinninLosingConnectivity(move, m) / 2;
+        // Give a score based on the distance of the last move from the center of mass (closer = better)
+        score += CloserToAvg(avgpos, move);
 
         return score;
     }
@@ -320,10 +305,15 @@ public class AI
         int middlesquares = MiddleSquares(m.GetCurrentAvg(player));
         foreach (Move move in moves)
         {
+            Vector2Int avgpos = m.GetCurrentAvg(move.pieceToMove.player) / m.GetPiecesByBool(move.pieceToMove.player).Count;
+            avgpos.x = Math.Abs(avgpos.x);
+            avgpos.y = Math.Abs(avgpos.y);
+            move.score = CloserToAvg(avgpos, move);
+
             //move.score = Evaluate(move, m);
-            move.score += CloserToAvg(m.GetCurrentAvg(player), move);
-            move.score *= move.attack ? 2 : 1;
-            move.score = middlesquares - BadSquares(move.moveto);
+            //move.score += CloserToAvg(m.GetCurrentAvg(player), move);
+            //move.score *= move.attack ? 2 : 1;
+            //move.score = middlesquares - BadSquares(move.moveto);
         }
         moves.Sort(delegate (Move p1, Move p2)
         {
@@ -332,64 +322,16 @@ public class AI
         });
     }
 
-    // Get a move
-    // If move was last played punish ai
-    private int MovePlayed(Move move)
-    {
-        if (GetMyLastMove() != null )
-        {
-            Move lastmove = move.pieceToMove.player ? LastWhiteMove : LastBlackMove;
-            return ((move.moveto == lastmove.pieceToMove.position) && (move.pieceToMove.position == lastmove.moveto)) ? 15 : 0;
-        }
-        return 0;
-    }
-
-
-    // Get a given model (in some point of time) and a move
-    // Reward having fewer pieces than the enemy
-    private int AmountOfPieces(Move move, Model m)
-    {
-        return m.GetPiecesByBool(move.pieceToMove.player).Count < m.GetPiecesByBool(!move.pieceToMove.player).Count ? 3 : -3;
-    }
-
-    // Get a given model (in some point of time) and a move
-    // Reward begin away from frame of board
-    private int BadSquares(Vector2Int moveto)
-    {
-        return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 7 : 0;
-    }
-
+    // Get an average position and a move
+    // Return a score based on the distance of the given move from the average position
     private int CloserToAvg(Vector2Int avg, Move move)
     {
         //return CalcDistanceBetween2Points(avg, move.moveto) ;
-        return CalcDistance(avg - move.moveto);
-    }
-
-    // Get a given model (in some point of time) and a move
-    // Evaluate the center of mass of the player's pieces
-    private int StructureEvaluation(Move move, Vector2Int avgpos, Model m)
-    {
-
-        // The furthest distance from the center of mass 
-        double Mymaxdist = -100;
-        // All the pieces of a certain color
-        List<Piece> Mypieces = m.GetPiecesByBool(move.pieceToMove.player);
-
-        // Go over all pieces and calculate distance of all x positions and y positions
-        // Find and save the furthest distance
-        for (int i = 0; i < Mypieces.Count; i++)
-        {
-            // Calculate distance of a piece from the average position
-            double distance = CalcDistance(Math.Abs(Mypieces[i].position.x - avgpos.x), Math.Abs(Mypieces[i].position.y - avgpos.y));
-            // Update if found a bigger distance
-            if (distance > Mymaxdist)
-            {
-                Mymaxdist = distance;
-            }
-        }
-
-        // Reward being close to the middle and reward having a closer formation (my max avg distance is lower then the enemeys)
-        return -(int)Mymaxdist;
+        Vector2Int minus = avg - move.moveto;
+        minus.x = Math.Abs(minus.x);
+        minus.y = Math.Abs(minus.y);
+        double score = (1 / CalcDistance(minus)) * 10;
+        return (int)score;
     }
 
     // Get a move and a model and try to score the connectivity of the pieces of the moving piece
@@ -431,6 +373,65 @@ public class AI
 
     }
 
+    // Get a player, a move and a model 
+    // Count the amount of groups on the board using bit board and return score based on amount (1 group is a win)
+    private int GroupScore(bool player, Move move, Model m)
+    {
+        int number = 0;
+        int amountOfGroups = 0;
+        m.board.InitCheckedThis();
+        // If the number of any players piece is 1 than the game is finished
+        if (m.GetPiecesByBool(player).Count == 1) { return 1000; }
+        // Go over the pieces of the player im checking
+        foreach (Piece p in m.GetPiecesByBool(move.pieceToMove.player))
+        {
+            // Save the current pieces position and the corrospondaning index
+            Vector2Int pos = p.position;
+            int index = m.board.PositionToIndex(pos);
+            // Check if said position hasnt been checked before
+            if ((m.board.checkedthis & m.board.TurnIndexToBitBoard(index)) == 0)
+            {
+                // Find the amount of of adjacent of pieces
+                number = m.board.FindLines(index, move.pieceToMove.player);
+                // amount of times i run the search is amount of groups
+                amountOfGroups++;
+            }
+        }
+
+        if (amountOfGroups == 1)
+        {
+            return 1000;
+        }
+
+        double score = 1 / amountOfGroups * GroupScoreMultiplier;
+        return (int)score;
+    }
+
+    // Get a given model (in some point of time) and a move
+    // Reward having fewer pieces than the enemy
+    private int AmountOfPieces(Move move, Model m)
+    {
+        return m.GetPiecesByBool(move.pieceToMove.player).Count < m.GetPiecesByBool(!move.pieceToMove.player).Count ? 3 : -3;
+    }
+
+    // Get a given model (in some point of time) and a move
+    // Reward begin away from frame of board
+    private int BadSquares(Vector2Int moveto)
+    {
+        return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 7 : 0;
+    }
+
+    // Get a move
+    // If move was last played punish ai
+    private int MovePlayed(Move move)
+    {
+        if (GetMyLastMove() != null)
+        {
+            Move lastmove = move.pieceToMove.player ? LastWhiteMove : LastBlackMove;
+            return ((move.moveto == lastmove.pieceToMove.position) && (move.pieceToMove.position == lastmove.moveto)) ? 15 : 0;
+        }
+        return 0;
+    }
 
     // Get the avg position of a certain player
     // Evaluate distance from the middle of the board
@@ -473,6 +474,33 @@ public class AI
         return 0;
     }
 
+    // Get a given model (in some point of time) and a move
+    // Evaluate the center of mass of the player's pieces
+    private int StructureEvaluation(Move move, Vector2Int avgpos, Model m)
+    {
+
+        // The furthest distance from the center of mass 
+        double Mymaxdist = -100;
+        // All the pieces of a certain color
+        List<Piece> Mypieces = m.GetPiecesByBool(move.pieceToMove.player);
+
+        // Go over all pieces and calculate distance of all x positions and y positions
+        // Find and save the furthest distance
+        for (int i = 0; i < Mypieces.Count; i++)
+        {
+            // Calculate distance of a piece from the average position
+            double distance = CalcDistance(Math.Abs(Mypieces[i].position.x - avgpos.x), Math.Abs(Mypieces[i].position.y - avgpos.y));
+            // Update if found a bigger distance
+            if (distance > Mymaxdist)
+            {
+                Mymaxdist = distance;
+            }
+        }
+
+        // Reward being close to the middle and reward having a closer formation (my max avg distance is lower then the enemeys)
+        return -(int)Mymaxdist;
+    }
+
     // -------------------------------- Utility Methods ------------------------------------------
 
     // Get 2 numbers and return the smaller one
@@ -497,7 +525,12 @@ public class AI
     // Just the same function only with a vector
     private int CalcDistance(Vector2Int pos)
     {
-        return (int)(pos.x ^ 2 + pos.y ^ 2) * -1 ;
+        int score = 0;
+        if ((score = (int)(pos.x ^ 2 + pos.y ^ 2)) == 0) 
+        {
+            return 1;
+        }
+        return score;
     }
 
     // Get and x and y index
@@ -506,6 +539,7 @@ public class AI
     {
         return (int)(Vector2Int.Distance(first, second)) * -5;
     }
+
     // Get a model
     // Return the avg position for all the pieces of a certain color
     private Vector2Int AvgPos(bool Myplayer, Model m)
@@ -539,13 +573,50 @@ public class AI
         controller.GetComponent<Game>().MoveAPieceInUnity(move);
     }
 
-
     private Move GetMyLastMove() 
     {
         return player ? LastWhiteMove : LastBlackMove;
     }
 
     //-------------------------- Past Versions (graveyard)----------------------------
+
+    //// Get a given model (in some point of time) and a move
+    //// Determine score for the given state of game
+    //public int Evaluate(Move move, Model m)
+    //{
+    //    int score = 1;
+    //    int amount = m.GetPiecesByBool(move.pieceToMove.player).Count;
+    //    // Average position of all the pieces with this color
+    //    Vector2Int avgpos = m.GetCurrentAvg(move.pieceToMove.player);
+    //    avgpos.x /= amount;
+    //    avgpos.y /= amount;
+
+    //    //score += SimpleWinningLosing(move.pieceToMove.player, m);
+
+    //    // Reward having less pieces then enemy
+    //    //score += AmountOfPieces(move, m);
+
+    //    //Calculate ceter of mass of all ai pieces and reward being close to the middle
+    //    score += MiddleSquares(move.moveto);
+
+    //    //// Trying out new things
+    //    //score += CloserToAvg(avgpos, move);
+
+    //    // Favoring attack for now 
+    //    if (move.attack) 
+    //    {
+    //        score *= 2;
+    //    }
+
+    //    // Reward begin away from frame of board
+    //    score -= BadSquares(move.moveto);
+
+    //    //// If winning reward higeset number if losing punihs with lowest number
+    //    //score += WinninLosingConnectivity(move, m) / 2;
+
+    //    return score;
+    //}
+
 
     // Ai is always black (for now)
     // make this better - dont have to count all pieces since each turn only 1 moves (6 lines change)
