@@ -227,7 +227,6 @@ public class AI
             else 
             {
                 m.MakeMove(nextmove);
-                //var cur = -NegaScout(-(alpha + 1) ,- alpha , !currentplayer, depth + 1, nextmove, m);
                 eval = -NegaScout(-(alpha + 1), -alpha, !currentplayer, depth + 1, nextmove, m);
                 m.Undomove(nextmove);
 
@@ -466,18 +465,6 @@ public class AI
         return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 10 : 0;
     }
 
-    // Get a move
-    // If move was last played punish ai
-    //private int MovePlayed(Move move)
-    //{
-    //    if (GetMyLastMove() != null)
-    //    {
-    //        Move lastmove = move.pieceToMove.player ? LastWhiteMove : LastBlackMove;
-    //        return ((move.moveto == lastmove.pieceToMove.position) && (move.pieceToMove.position == lastmove.moveto)) ? 15 : 0;
-    //    }
-    //    return 0;
-    //}
-
     // Get the avg position of a certain player
     // Evaluate distance from the middle of the board
     private int MiddleSquares(Vector2Int pos)
@@ -633,13 +620,6 @@ public class AI
         return dist;
     }
 
-    // Get and x and y index
-    // Return distance 
-    private int CalcDistanceBetween2Points(Vector2Int first, Vector2Int second)
-    {
-        return (int)(Vector2Int.Distance(first, second)) * -5;
-    }
-
     // Get a model
     // Return the avg position for all the pieces of a certain color
     private Vector2Int AvgPos(bool Myplayer, Model m)
@@ -675,7 +655,23 @@ public class AI
     }
 
     //-------------------------- Past Versions (graveyard)----------------------------
-
+    //// Get and x and y index
+    //// Return distance 
+    //private int CalcDistanceBetween2Points(Vector2Int first, Vector2Int second)
+    //{
+    //    return (int)(Vector2Int.Distance(first, second)) * -5;
+    //}
+    // Get a move
+    // If move was last played punish ai
+    //private int MovePlayed(Move move)
+    //{
+    //    if (GetMyLastMove() != null)
+    //    {
+    //        Move lastmove = move.pieceToMove.player ? LastWhiteMove : LastBlackMove;
+    //        return ((move.moveto == lastmove.pieceToMove.position) && (move.pieceToMove.position == lastmove.moveto)) ? 15 : 0;
+    //    }
+    //    return 0;
+    //}
     //// Get a given model (in some point of time) and a move
     //// Determine score for the given state of game
     //public int Evaluate(Move move, Model m)
