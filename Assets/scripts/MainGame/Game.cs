@@ -40,7 +40,7 @@ public class Game : MonoBehaviour
     // Depth for ai vs human
     private static int AivsHumanDepth = 4;
     private static int AivsAiDepthb = 3;
-    private static int AivsAiDepthw = 2;
+    private static int AivsAiDepthw = 3;
 
     float timeToTestSimpaleCube;
 
