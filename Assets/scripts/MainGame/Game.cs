@@ -57,6 +57,7 @@ public class Game : MonoBehaviour
         ActivateOption(mode);
         InitializeGame();
     }
+
     private void Update()
     {
         
@@ -75,11 +76,13 @@ public class Game : MonoBehaviour
                     if (currentai)
                     {
                         otherai.mainModel = model;
+                        otherai.turncounter = turncounter;
                         otherai.StartAi();
                     }
                     else
                     {
                         ai.mainModel = model;
+                        ai.turncounter = turncounter;
                         ai.StartAi();
                     }
                     // increment
@@ -103,9 +106,9 @@ public class Game : MonoBehaviour
                     if (!currentplayer)
                     {
                         ai.mainModel = model;
+                        ai.turncounter = turncounter;
                         ai.StartAi();
                         turncounter++;
-
                         currentplayer = !currentplayer;
                         // Update the turn counter
                         UpdateTurns();

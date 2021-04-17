@@ -17,6 +17,9 @@ public class Move
     // Possible moves that can be played after 
     public List<Move> Child { get; set; }
 
+    public int weight;
+
+
     // --------------------------------------------------------- Constructors ---------------------------------------------------------------
     
     // Normal contructor that recieves all the atributes a move has
@@ -26,6 +29,7 @@ public class Move
         this.pieceToMove = pieceToMove;
         this.score = score;
         this.attack = attack;
+        this.weight = 0;
         this.Child = new List<Move>(8);
     }
 
@@ -34,6 +38,8 @@ public class Move
     {
         this.moveto = moveto;
         this.attack = attack;
+        this.weight = 0;
+
     }
 
     // Empty contructor that initilizes every variable to 0 or null
@@ -43,6 +49,7 @@ public class Move
         this.pieceToMove = null;
         this.score = int.MinValue;
         this.attack = false;
+        this.weight = 0;
         this.Child = new List<Move>(8);
     }
 
@@ -53,7 +60,17 @@ public class Move
         this.pieceToMove = new Piece(copythis.pieceToMove);
         this.score = copythis.score;
         this.attack = copythis.attack;
+        this.weight = copythis.weight ;
         this.Child = new List<Move>(8);
+    }
+
+    public void IncreaseWeight() 
+    {
+        this.weight++;
+    }
+    public void DecreaseWeight()
+    {
+        this.weight--;
     }
 
 
