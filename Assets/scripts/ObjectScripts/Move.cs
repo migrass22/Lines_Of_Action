@@ -14,10 +14,6 @@ public class Move
     public int score { get; set; }
     // State of move, is it attacking something or not
     public bool attack { get; set; }
-    // Possible moves that can be played after 
-    public List<Move> Child { get; set; }
-
-    public int weight;
 
 
     // --------------------------------------------------------- Constructors ---------------------------------------------------------------
@@ -29,8 +25,6 @@ public class Move
         this.pieceToMove = pieceToMove;
         this.score = score;
         this.attack = attack;
-        this.weight = 0;
-        this.Child = new List<Move>(8);
     }
 
     // Half full contructor that only recieves a location to move to and if its an attack or not
@@ -38,8 +32,6 @@ public class Move
     {
         this.moveto = moveto;
         this.attack = attack;
-        this.weight = 0;
-
     }
 
     // Empty contructor that initilizes every variable to 0 or null
@@ -49,8 +41,6 @@ public class Move
         this.pieceToMove = null;
         this.score = int.MinValue;
         this.attack = false;
-        this.weight = 0;
-        this.Child = new List<Move>(8);
     }
 
     // Copy Constructor to copy a given move value wise (deep copy)
@@ -60,18 +50,8 @@ public class Move
         this.pieceToMove = new Piece(copythis.pieceToMove);
         this.score = copythis.score;
         this.attack = copythis.attack;
-        this.weight = copythis.weight ;
-        this.Child = new List<Move>(8);
     }
 
-    public void IncreaseWeight() 
-    {
-        this.weight++;
-    }
-    public void DecreaseWeight()
-    {
-        this.weight--;
-    }
 
 
     // -------------------------------------------------------- Utility Functions ------------------------------------------------------------

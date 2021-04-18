@@ -116,10 +116,10 @@ public class LOAman : MonoBehaviour
         if (player == controller.GetComponent<Game>().GetCurrentPlayer() && !endgame)
         {
             DestroyMovePlates();
-            Move move = new Move();
-            m.FutureMovesImproved(p, move.Child);
+            List<Move> moves = new List<Move>(96);
+            m.FutureMovesImproved(p, moves);
             //m.PossibleMovesImproved(p);
-            foreach (Move possiblemove in move.Child)
+            foreach (Move possiblemove in moves)
             {
                 MovePlateSpawn(possiblemove);
             }

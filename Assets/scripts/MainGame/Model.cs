@@ -12,6 +12,11 @@ public class Model
     // Hold pieces of each color that are in the game
     public List<Piece> whites { get; set; }
     public List<Piece> blacks { get; set; }
+
+    // Trying dictionary
+    public Dictionary<Vector2Int,Piece> WhiteDic { get; set; }
+    public Dictionary<Vector2Int,Piece> BlackDic { get; set; }
+
     // BitBoard object to do all logical actions
     public BitBoard board { get; set; }
 
@@ -30,8 +35,6 @@ public class Model
     // Trying to cut time down by saving the avg position of both players
     public Vector2Int WhiteAvg;
     public Vector2Int BlackAvg;
-    public int BlackDist;
-    public int WhiteDist;
 
     // ----------------------------------- Constructors ----------------------------------
 
@@ -51,39 +54,40 @@ public class Model
         this.sdiagonal = tempsdiagonal;
         WhiteAvg = new Vector2Int(42,42);
         BlackAvg = new Vector2Int(42,42);
-        WhiteDist = 328;
-        BlackDist = 328;
+        this.WhiteDic = new Dictionary<Vector2Int, Piece>(12);
+        this.BlackDic = new Dictionary<Vector2Int, Piece>(12);
 
     }
 
     // Copy ctor for a model to a second model
     public Model(Model copythis)
+    {
+        // Init model as empty
+        this.whites = new List<Piece>(12);
+        this.blacks = new List<Piece>(12);
+        this.board = new BitBoard();
+        this.WhiteDic = new Dictionary<Vector2Int, Piece>(12);
+        this.BlackDic = new Dictionary<Vector2Int, Piece>(12);
+        // Deep copy each piece
+        foreach (Piece p in copythis.WhiteDic.Values)
         {
-            // Init model as empty
-            this.whites = new List<Piece>(12);
-            this.blacks = new List<Piece>(12);
-            this.board = new BitBoard();
-
-            // Deep copy each piece
-            foreach (Piece p in copythis.whites)
-            {
-                this.whites.Add(new Piece(new Vector2Int(p.position.x, p.position.y), p.player));
-            }
-            foreach (Piece p in copythis.blacks)
-            {
-                this.blacks.Add(new Piece(new Vector2Int(p.position.x, p.position.y), p.player));
-            }
-
-            // Copy the board as well
-            this.board = new BitBoard(copythis.board);
-            // Copy the arrays that count the amount of pieces in each col row and diagnoals
-            CopyNumberArrays(copythis);
-
-            WhiteAvg = new Vector2Int(copythis.WhiteAvg.x, copythis.WhiteAvg.y) ;
-            BlackAvg = new Vector2Int(copythis.BlackAvg.x, copythis.BlackAvg.y);
-            WhiteDist = copythis.WhiteDist;
-            BlackDist = copythis.BlackDist;
+            this.whites.Add(new Piece(new Vector2Int(p.position.x, p.position.y), p.player));
+            this.WhiteDic.Add(p.position, new Piece(new Vector2Int(p.position.x, p.position.y), p.player));
         }
+        foreach (Piece p in copythis.BlackDic.Values)
+        {
+            this.blacks.Add(new Piece(new Vector2Int(p.position.x, p.position.y), p.player));
+            this.BlackDic.Add(p.position, new Piece(new Vector2Int(p.position.x, p.position.y), p.player));
+        }
+
+        // Copy the board as well
+        this.board = new BitBoard(copythis.board);
+        // Copy the arrays that count the amount of pieces in each col row and diagnoals
+        CopyNumberArrays(copythis);
+
+        WhiteAvg = new Vector2Int(copythis.WhiteAvg.x, copythis.WhiteAvg.y);
+        BlackAvg = new Vector2Int(copythis.BlackAvg.x, copythis.BlackAvg.y);
+    }
 
     // Copy number arrays from a given model to this model
     private void CopyNumberArrays(Model copythis) 
@@ -99,15 +103,17 @@ public class Model
 
 
     // Get a bool of a player and return the list of the pieces for that player
-    public List<Piece> GetPiecesByBool(bool player)
+    public Dictionary<Vector2Int, Piece> GetPiecesByBool(bool player)
     {
         if (player)
         {
-            return whites;
+            //return whites;
+            return this.WhiteDic;
         }
         else
         {
-            return blacks;
+            //return blacks;
+            return this.BlackDic;
         }
     }
 
@@ -142,6 +148,13 @@ public class Model
         // this position does not hold any kind of piece so return null
         return null;
     }
+    
+    public Piece GetPieceFromDic(Vector2Int pos, bool player) 
+    {
+        if (player) { return WhiteDic[pos]; }
+        else { return BlackDic[pos]; }
+        //return AllPieces[pos];
+    }
 
     // ----------------------------------- Core game methods ------------------------------
 
@@ -154,7 +167,7 @@ public class Model
         // If the number of any players piece is 1 than the game is finished
         if (GetPiecesByBool(currentplayer).Count == 1) { return true; }
         // Get a single piece
-        Piece p = GetPiecesByBool(currentplayer)[0];
+        Piece p = GetPiecesByBool(currentplayer).First().Value;
         // Save the current pieces position and the corrospondaning index
         Vector2Int pos = p.position;
         int index = board.PositionToIndex(pos);
@@ -197,16 +210,24 @@ public class Model
     // Change the position of the piece thats supposed to move and also remove an enemy piece if it was eaten
     private void ChangePosition(Move move)
     {
-        // Find the actuall piece
-        Piece actuallPiece = FindPiece(move.pieceToMove);
-        move.pieceToMove = new Piece(actuallPiece);
-        actuallPiece.position = new Vector2Int(move.moveto.x, move.moveto.y);
+        // Find the actuall piececer
+        bool player = move.pieceToMove.player;
+        Piece actualPiece = GetPieceFromDic(move.pieceToMove.position, player);
+        GetPiecesByBool(player).Remove(move.pieceToMove.position);
+        move.pieceToMove = new Piece(actualPiece);
+        actualPiece.position = new Vector2Int(move.moveto.x, move.moveto.y);
 
         // If move was an attack move then remove the other players piece from the list
         if (move.attack)
         {
-            GetPiecesByBool(!actuallPiece.player).Remove(GetPieceByIndex(move.moveto));
+            GetPiecesByBool(player).Add(move.moveto,actualPiece);
+            GetPiecesByBool(!player).Remove(move.moveto);
         }
+        else 
+        {
+            GetPiecesByBool(player).Add(move.moveto, actualPiece);
+        }
+
     }
 
     // Method to change amount of pieces in move arrays
@@ -351,13 +372,53 @@ public class Model
     public List<Move> GenerateAllMoves(bool player)
     {
         List<Move> moves = new List<Move>(96);
-        foreach (Piece p in GetPiecesByBool(player))
+        foreach (Piece p in GetPiecesByBool(player).Values)
         {
             FutureMovesImproved(p, moves);
         }
         return moves;
     }
 
+    // Get a certain player
+    // Find all the moves that player can make at the current state of the board
+    public List<Move> GenerateAllMoves(bool player, List<KillerMove> killers)
+    {
+        List<Move> moves = new List<Move>(96);
+        foreach (Piece p in GetPiecesByBool(player).Values)
+        {
+            FutureMovesImproved(p, moves, killers);
+        }
+        return moves;
+    }
+    // Get a piece and return where it can go to using move arrays
+    public List<Move> FutureMovesImproved(Piece p, List<Move> futuremoves, List<KillerMove> killers)
+    {
+        Vector2Int position = p.position;
+        // y position is amount of pieces in this num of col
+        // x position is number of pieces in this num of row
+        int colmove = col[position.x];
+        int rowmove = row[position.y];
+        // Turn a position to the index of correct diagonal
+        int pdiagmove = pdiagonal[position.y - position.x + 7];
+        int sdiagmove = sdiagonal[position.y + position.x];
+
+        // Check for col moves of piece
+        MoveInAline(p, futuremoves, new Vector2Int(position.x, position.y + colmove), new Vector2Int(0, 1));
+        MoveInAline(p, futuremoves, new Vector2Int(position.x, position.y - colmove), new Vector2Int(0, -1));
+
+        // Check for row moves of piece
+        MoveInAline(p, futuremoves, new Vector2Int(position.x + rowmove, position.y), new Vector2Int(1, 0));
+        MoveInAline(p, futuremoves, new Vector2Int(position.x - rowmove, position.y), new Vector2Int(-1, 0));
+
+        // Check for the primary diagonal of the piece
+        MoveInAline(p, futuremoves, new Vector2Int(position.x + pdiagmove, position.y + pdiagmove), new Vector2Int(1, 1));
+        MoveInAline(p, futuremoves, new Vector2Int(position.x - pdiagmove, position.y - pdiagmove), new Vector2Int(-1, -1));
+
+        // Check for the secondery diagonal of the piece
+        MoveInAline(p, futuremoves, new Vector2Int(position.x + sdiagmove, position.y - sdiagmove), new Vector2Int(1, -1));
+        MoveInAline(p, futuremoves, new Vector2Int(position.x - sdiagmove, position.y + sdiagmove), new Vector2Int(-1, 1));
+        return futuremoves;
+    }
     // Get a piece and return where it can go to using move arrays
     public List<Move> FutureMovesImproved(Piece p, List<Move> futuremoves)
     {
@@ -390,6 +451,52 @@ public class Model
 
     // Get a piece, an endpoint and a direction
     // Add a new move to the pieces possible moves if said move is possible
+    public void MoveInAline(Piece p, List<Move> futuremoves, Vector2Int endPoint, Vector2Int dir, List<KillerMove> killers)
+    {
+        // Check for the column of this piece
+        // End point is on the board?
+        if (IsOnBoard(endPoint.x, endPoint.y))
+        {
+            // Are there enemy pieces i jump over?
+            if (!board.IsEnemyBeforeHere(p.position, endPoint, dir, p.player))
+            {
+                // Is there a piece at the end?
+                if (board.IsPieceHere(endPoint))
+                {
+                    // Is this piece an enemy Piece?
+                    if (board.IsEnemy(endPoint, p.player))
+                    {
+                        int score = MiddleSquares(endPoint);
+                        score -= BadSquares(endPoint);
+                        Move move = new Move(new Piece(p), endPoint, score, true);
+                        KillerMove km;
+                        if ((km = killers.Find(item => item.ToString() == move.ToString())) != null) 
+                        {
+                            km.found = true;
+                        }
+                        // Create a new attack move at this point, save on the piece,
+                        futuremoves.Add(move);
+                    }
+                }
+                else
+                {
+                    int score = MiddleSquares(endPoint);
+                    score -= BadSquares(endPoint);
+                    Move move = new Move(new Piece(p), endPoint, score, false);
+                    KillerMove km;
+                    if ((km = killers.Find(item => item.ToString() == move.ToString())) != null)
+                    {
+                        km.found = true;
+                    }
+                    // No piece at end point -> create a new normal move
+                    futuremoves.Add(move);
+                }
+            }
+        }
+    }
+
+    // Get a piece, an endpoint and a direction
+    // Add a new move to the pieces possible moves if said move is possible
     public void MoveInAline(Piece p, List<Move> futuremoves, Vector2Int endPoint, Vector2Int dir)
     {
         // Check for the column of this piece
@@ -405,14 +512,19 @@ public class Model
                     // Is this piece an enemy Piece?
                     if (board.IsEnemy(endPoint, p.player))
                     {
+                        int score = MiddleSquares(endPoint);
+                        score -= BadSquares(endPoint);
+                        
                         // Create a new attack move at this point, save on the piece,
-                        futuremoves.Add(new Move(new Piece(p), endPoint, 0, true));
+                        futuremoves.Add(new Move(new Piece(p), endPoint, score, true));
                     }
                 }
                 else
                 {
+                    int score = MiddleSquares(endPoint);
+                    score -= BadSquares(endPoint);
                     // No piece at end point -> create a new normal move
-                    futuremoves.Add(new Move(new Piece(p), endPoint, 0, false));
+                    futuremoves.Add(new Move(new Piece(p), endPoint, score, false));
                 }
             }
         }
@@ -460,19 +572,24 @@ public class Model
     // Reverse the effects of the move 
     public void UndoChangePosition(Move move) 
     {
+        // Get the piece
+        Piece actualPiece = GetPieceFromDic(move.moveto, move.pieceToMove.player);
         // If the move was an attack move
         if (move.attack)
         {
             // Recreate the lost piece and add it to the list of pieces
             Piece eatenPiece = new Piece(null, move.moveto, !move.pieceToMove.player);
-            GetPiecesByBool(!move.pieceToMove.player).Add(eatenPiece);
+            GetPiecesByBool(!move.pieceToMove.player).Add(move.moveto, eatenPiece);
+            GetPiecesByBool(move.pieceToMove.player).Remove(move.moveto);
+        }
+        else 
+        {
+            GetPiecesByBool(move.pieceToMove.player).Remove(move.moveto);
         }
 
-        // Get the piece
-        Piece actuallPiece = GetPieceByIndex(move.moveto);
-
+        GetPiecesByBool(move.pieceToMove.player).Add(move.pieceToMove.position, actualPiece);
         // Change its position
-        actuallPiece.position = move.pieceToMove.position;
+        actualPiece.position = move.pieceToMove.position;
     }
 
     // Something to update the avg position of pieces of a certain color
@@ -494,6 +611,24 @@ public class Model
             SetCurrentAvg(!player, Avg);
         }
 
+    }
+
+    // Get a given model (in some point of time) and a move
+    // Reward begin away from frame of board
+    private int BadSquares(Vector2Int moveto)
+    {
+        return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 10 : 0;
+    }
+
+    // Get the avg position of a certain player
+    // Evaluate distance from the middle of the board
+    private int MiddleSquares(Vector2Int pos)
+    {
+        if ((pos.x == 3 || pos.x == 4) && (pos.y == 3 || pos.y == 4))
+        {
+            return 10;
+        }
+        return 0;
     }
 
 
@@ -523,23 +658,6 @@ public class Model
         }
     }
 
-    // Get a copy of a piece
-    // Find the actuall object in the model
-    private Piece FindPiece(Piece p)
-    {
-        foreach (Piece foundPiece in GetPiecesByBool(p.player))
-        {
-            if (foundPiece.position == p.position)
-            {
-                return foundPiece;
-            }
-
-        }
-
-        // If not found return null
-        return null;
-    }
-
     // Get 2 indexes and check if they are legal
     public bool IsOnBoard(int x, int y)
     {
@@ -550,7 +668,7 @@ public class Model
     public void RemovePiece(Piece p)
     {
         // Use its "player" to get the right list
-        GetPiecesByBool(p.player).Remove(p);
+        GetPiecesByBool(p.player).Remove(p.position);
     }
 
 
@@ -676,7 +794,22 @@ public class Model
 
 
     //}
+    //// Get a copy of a piece
+    //// Find the actuall object in the model
+    //private Piece FindPiece(Piece p)
+    //{
+    //    foreach (Piece foundPiece in GetPiecesByBool(p.player).Values)
+    //    {
+    //        if (foundPiece.position == p.position)
+    //        {
+    //            return foundPiece;
+    //        }
 
+    //    }
+
+    //    // If not found return null
+    //    return null;
+    //}
 }
 
 

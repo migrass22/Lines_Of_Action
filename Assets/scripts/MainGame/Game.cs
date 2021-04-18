@@ -219,6 +219,7 @@ public class Game : MonoBehaviour
         lm.Activate();
         // Using everything we have create a new piece object and return it
         Piece CurrentPiece = new Piece(obj, new Vector2Int(x, y), player);
+        model.GetPiecesByBool(player).Add(new Vector2Int(x, y), CurrentPiece);
         return CurrentPiece;
     }
 
@@ -361,7 +362,8 @@ public class Game : MonoBehaviour
         if (move.attack)
         {
             // Get the piece using position -> this is o(n^2) get this better maybe??
-            Piece AfterPiece = model.GetPieceByIndex(move.moveto);
+            //Piece AfterPiece = model.GetPieceByIndex(move.moveto);
+            Piece AfterPiece = model.GetPiecesByBool(!move.pieceToMove.player)[move.moveto];
             // Remove the piece from lists in model
             model.RemovePiece(AfterPiece);
             // Actually destroy said piece from board
@@ -374,18 +376,19 @@ public class Game : MonoBehaviour
     private void UpdateAllDbsAndPieces(Move move) 
     {
         // Piece to move
-        Piece BeforePiece = model.GetPieceByIndex(move.pieceToMove.position);
+        //Piece BeforePiece = model.GetPieceByIndex(move.pieceToMove.position);
+        Piece BeforePiece = new Piece(model.GetPiecesByBool(move.pieceToMove.player)[move.pieceToMove.position]);
         // Update array numbers and position of the pieces
-        model.MakeMove(move);
-
-        BeforePiece.piece.GetComponent<LOAman>().StartMoving(move);
+        model.MakeMove(new Move(move));
+        move.pieceToMove = BeforePiece;
+        move.pieceToMove.piece.GetComponent<LOAman>().StartMoving(move);
 
         // Update the position in the unity space of the piece im moving
         //BeforePiece.piece.GetComponent<LOAman>().SetXBoard(move.moveto.x);
         //BeforePiece.piece.GetComponent<LOAman>().SetYBoard(move.moveto.y);
 
         // Remove move plates since move is made
-        BeforePiece.piece.GetComponent<LOAman>().DestroyMovePlates();
+        move.pieceToMove.piece.GetComponent<LOAman>().DestroyMovePlates();
         // Make said move on the bit board
     }
 

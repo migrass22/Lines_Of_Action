@@ -3,41 +3,22 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-
 using UnityEngine.Profiling;
+
 public class AI
 {
 
-    /*    To do:
-         1. function to copy the current model into a temporary one -> saving only vector2int for positions V
-         2. using that new model make moves using the function u already have to find the best move V MADE EVEN BETTER
-         2.5 first move is easy second move by the other player should lower the score of the first move V
-         3. orgenize please tom ffs
-         Figure out how to save moves VX
-         4. save avg pos and change it every move - makes moves at depth 4 2 seconds long
-
-
-         Currently depth = 4  ttm -> 66 sec
-                              w/o eval -> ttm -> 50 sec
-         UPGRADE GOT TO DEPTH 
-
-         UNDERSTAND HOW TO LOWER THE RECURSION TIME
-         (KILLER HEURISTIC?)*/
-
+    // TODO: add killer hueristic
+    // TODO: get to depth 5 under 2 sec
+    // TODO: get to depth 4 under 1 sec
+    //
     // -------------------------------- Variables---------------------------------------
-
-    // The controller for the game
-
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // Get hezion - avg to actually calculate better position after a number of moves
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     //// Trying out transposition table
     //Hashtable transposition = new Hashtable();
 
+
     // Enum for different types of ai's
-
-
     public enum AItypes
     {
         NegaScout, NegaMax, nothing
@@ -66,7 +47,7 @@ public class AI
     public bool player;
 
     // Killer moves
-    private List<Move>[] killers;
+    private List<KillerMove>[] killers;
 
     // Static variable for evaluate functions
     private const int MyGroupScoreMultiplier = 10;
@@ -80,10 +61,10 @@ public class AI
         this.player = player;
         this.searchDepth = searchdepth;
         this.mainModel = new Model(m);
-        this.killers = new List<Move>[searchDepth];
+        this.killers = new List<KillerMove>[searchDepth];
         for (int i = 0; i < searchDepth; i++)
         {
-            killers[i] = new List<Move>();
+            killers[i] = new List<KillerMove>();
         }
         BuildDistanceArr();
     }
@@ -95,10 +76,10 @@ public class AI
         this.searchDepth = searchdepth;
         this.mainModel = new Model(m);
         this.type = TypeOfAi;
-        this.killers = new List<Move>[searchDepth];
+        this.killers = new List<KillerMove>[searchDepth];
         for (int i = 0; i < searchDepth; i++)
         {
-            killers[i] = new List<Move>();
+            killers[i] = new List<KillerMove>();
         }
         BuildDistanceArr();
     }
@@ -151,13 +132,12 @@ public class AI
             // make the move on the model
             temp.MakeMove(move);
 
-
             current = ActivateTypeOfAi(move, temp);
 
             // Handle minimizer players evaluate or maximizer players evaluate
             // Ending the search on enemy player returns negative score
             current = searchDepth % 2 == 0 ? current : -current;
-            
+
             // undo the move
             temp.Undomove(move);
             // If the current move is better then the best one yet than save it
@@ -206,7 +186,7 @@ public class AI
         positions++;
         if (depth == searchDepth || m.checkwin(currentplayer) || m.checkwin(!currentplayer))
         {
-            return Evaluate(currentplayer, m);
+            return Evaluate(currentplayer, m, depth);
         }
 
         int eval = -10000;
@@ -229,23 +209,25 @@ public class AI
             // Cutoff
             if (alpha >= beta)
             {
-                if (!killers[depth].Contains(nextmove))
-                {
-                    killers[depth].Add(new Move(nextmove));
-                }
-                else 
-                {
-                    killers[depth].Find(nextmove => nextmove.ToString() == nextmove.ToString()).IncreaseWeight();
-                }
+                //KillerMove value;
+                //if ((value = killers[depth].Find(item => item.ToString() == ToString())) == null)
+                //{
+                //    killers[depth].Add(new KillerMove(nextmove, 0));
+                //}
+                //else
+                //{
+                //    value.IncreaseWeight();
+                //}
                 break;
             }
-            if (alpha < beta)
-            {
-                if (killers[depth].Contains(nextmove)) 
-                {
-                    killers[depth].Find(nextmove => nextmove.ToString() == nextmove.ToString()).DecreaseWeight();
-                }
-            }
+            //if (alpha < beta)
+            //{
+            //    KillerMove value;
+            //    if ((value = killers[depth].Find(item => item.ToString() == ToString())) != null)
+            //    {
+            //        value.DecreaseWeight();
+            //    }
+            //}
         }
         return eval;
     }
@@ -253,15 +235,17 @@ public class AI
     // Try #3 on negascout recursion -> (no evaluate) depth 4 = <1 sec | d 5 = 5 sec | d 6 = 20 sec 1,520,000 positions searched
     private int NegaScout(int alpha, int beta, bool currentplayer, int depth, Model m)
     {
-        if (depth == searchDepth || m.checkwin(currentplayer))
+        if (depth == searchDepth || m.checkwin(currentplayer) || m.checkwin(!currentplayer))
         {
-            return Evaluate(currentplayer, m);
+            return Evaluate(currentplayer, m, depth);
         }
+
         bool flag = true;
         int eval = -10000;
 
+
         // Generate all possible moves
-        List<Move> moves = m.GenerateAllMoves(currentplayer);
+        List<Move> moves = m.GenerateAllMoves(currentplayer, killers[depth]);
 
         // Implementing move ordering
         SimpleMoveOrdering(moves, depth);
@@ -296,23 +280,26 @@ public class AI
             // Cutoff
             if (alpha >= beta)
             {
-                if (!killers[depth].Contains(nextmove))
-                {
-                    killers[depth].Add(nextmove);
-                }
-                else
-                {
-                    nextmove.IncreaseWeight();
-                }
+                //KillerMove value;
+
+                //if ((value = killers[depth].Find(item => item.move.ToString() == nextmove.ToString())) == null)
+                //{
+                //    killers[depth].Add(new KillerMove(nextmove, 0));
+                //}
+                //else
+                //{
+                //    value.IncreaseWeight();
+                //}
                 return alpha;
             }
-            if (alpha < beta)
-            {
-                if (killers[depth].Contains(nextmove))
-                {
-                    nextmove.DecreaseWeight();
-                }
-            }
+            //else if (alpha < beta && killers[depth].Count > 0)
+            //{
+            //    KillerMove value;
+            //    if ((value = killers[depth].Find(item => item.move.ToString() == nextmove.ToString())) != null)
+            //    {
+            //        value.DecreaseWeight();
+            //    }
+            //}
         }
         return alpha;
     }
@@ -322,7 +309,7 @@ public class AI
     {
         if (depth == searchDepth || m.checkwin(currentplayer))
         {
-            return Evaluate(currentplayer, m);
+            return Evaluate(currentplayer, m, depth);
         }
 
         int a, b, t, i = 0;
@@ -394,7 +381,7 @@ public class AI
     {
         if (move.attack || depth == qsDepth || m.checkwin(move.pieceToMove.player))
         {
-            return Evaluate(move.pieceToMove.player, m);
+            return Evaluate(move.pieceToMove.player, m, depth);
         }
         Model temp = new Model(m);
         return NegaScout(-1000, 1000, move.pieceToMove.player, depth,temp);
@@ -405,7 +392,7 @@ public class AI
 
     // Get a given model (in some point of time) and a move
     // Determine score for the given state of game
-    public int Evaluate(bool currentplayer, Model m) 
+    public int Evaluate(bool currentplayer, Model m, int depth) 
     {
         int score = 0;
 
@@ -419,9 +406,9 @@ public class AI
         //}
 
 
-        if (turncounter > 10) 
+        if (turncounter > 5)
         {
-            score += SimpleWinningLosing(currentplayer, m);
+            score += SimpleWinningLosing(currentplayer, depth, m);
         }
 
         // Turn saved average position into its actuall value (currently the sum of all positions)
@@ -436,41 +423,33 @@ public class AI
     // Give every move a score and sort them
     private void SimpleMoveOrdering(List<Move> moves, int depth)
     {
-        foreach (Move move in moves)
-        {
-            move.score += MiddleSquares(move.moveto);
-            move.score -= BadSquares(move.moveto);
-        }
         moves.Sort(delegate (Move p1, Move p2)
         {
             int compareScore = p1.score.CompareTo(p2.score);
             return compareScore;
         });
-        killers[depth].Sort(delegate (Move p1, Move p2) 
-        {
-            int compareScore = p1.weight.CompareTo(p2.weight);
-            return compareScore;
-        });
-        if (killers[depth].Count > 2)
-        {
-            killers[depth].RemoveRange(2, killers[depth].Count - 2);
-        }
-        AddKillerMoves(moves, depth);
-        //moves.InsertRange(0, killers[depth]);
+        //killers[depth].Sort(delegate (KillerMove p1, KillerMove p2)
+        //{
+        //    int compareScore = p1.weight.CompareTo(p2.weight);
+        //    return compareScore;
+        //});
+        //if (killers[depth].Count > 2)
+        //{
+        //    killers[depth].RemoveRange(2, killers[depth].Count - 2);
+        //}
+        //AddKillerMoves(moves, depth);
     }
 
     private void AddKillerMoves(List <Move> moves, int depth) 
     {
         for (int i = killers[depth].Count-1; i > -1; i--)
         {
-            if (moves.Contains(killers[depth][i])) 
+            if (killers[depth][i].found) 
             {
-                moves.Remove(killers[depth][i]);
-                moves.Insert(0, killers[depth][i]);
+                moves.Insert(0, killers[depth][i].move);
             }
-            
+            killers[depth][i].found = false;
         }
-
     }
 
     // Get an average position and a move
@@ -501,7 +480,7 @@ public class AI
         // If the number of any players piece is 1 than the game is finished
         if (m.GetPiecesByBool(player).Count == 1) { return 10000; }
         // Go over the pieces of the player im checking
-        foreach (Piece p in m.GetPiecesByBool(player))
+        foreach (Piece p in m.GetPiecesByBool(player).Values)
         {
             // Save the current pieces position and the corrospondaning index
             Vector2Int pos = p.position;
@@ -533,49 +512,22 @@ public class AI
         return m.GetPiecesByBool(move.pieceToMove.player).Count < m.GetPiecesByBool(!move.pieceToMove.player).Count ? 3 : -3;
     }
 
-    // Get a given model (in some point of time) and a move
-    // Reward begin away from frame of board
-    private int BadSquares(Vector2Int moveto)
-    {
-        return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 10 : 0;
-    }
-
-    // Get the avg position of a certain player
-    // Evaluate distance from the middle of the board
-    private int MiddleSquares(Vector2Int pos)
-    {
-        if ((pos.x == 3 || pos.x == 4 )&&(pos.y == 3|| pos.y ==4)) 
-        {
-            return 10;
-        }
-        return 0;
-    }
-
-    // Get a given model (in some point of time) and a move
-    // Check if winning or losinng and if not any of those evaluate the connectivity, return appropriate number
-    private int WinninLosingConnectivity(Move move, Model m)
-    {
-        int maxme = ConnectivityScore(move, m);
-        if (maxme == m.GetPiecesByBool(move.pieceToMove.player).Count)
-        {
-            return 10000;
-        }
-        else if (m.checkwin(!move.pieceToMove.player))
-        {
-            return -10000;
-        }
-        float proportion = maxme / m.GetPiecesByBool(move.pieceToMove.player).Count;
-        return (int)proportion;
-    }
-
-    private int SimpleWinningLosing(bool player, Model m) 
+    private int SimpleWinningLosing(bool player, int depth, Model m) 
     {
         if (m.checkwin(player))
         {
+            if (depth != searchDepth) 
+            {
+                return 100000;                
+            }
             return 10000;
         }
         else if (m.checkwin(!player))
         {
+            if (depth != searchDepth)
+            {
+                return -100000;
+            }
             return -10000;
         }
         return 0;
@@ -591,7 +543,7 @@ public class AI
         // If the number of any players piece is 1 than the game is finished
         if (m.GetPiecesByBool(move.pieceToMove.player).Count == 1) { return 10000; }
         // Go over the pieces of the player im checking
-        foreach (Piece p in m.GetPiecesByBool(move.pieceToMove.player))
+        foreach (Piece p in m.GetPiecesByBool(move.pieceToMove.player).Values)
         {
             // Save the current pieces position and the corrospondaning index
             Vector2Int pos = p.position;
@@ -640,7 +592,7 @@ public class AI
     {
         int i = 0;
         int sum = 0;
-        foreach (Piece p in m.GetPiecesByBool(player)) 
+        foreach (Piece p in m.GetPiecesByBool(player).Values) 
         {
             Vector2Int minus = avg - p.position;
             minus.x = Math.Abs(minus.x);
@@ -678,12 +630,42 @@ public class AI
         turncounter++;
     }
 
+    // Get a list of moves , a certain move , and a bool
+    // Return true if the move is in the list otherwise false also inc or dec its weight
+    private bool RemoveMoveIfFound(List<Move> moves, int depth, KillerMove move)
+    {
+
+        KillerMove value = killers[depth].Find(item => item.ToString() == ToString());
+        if (value != null)
+        {
+            moves.Remove(value.move);
+            return true;
+        }
+        return false;
+    }
+
     private void PracticeBots() 
     {
         
     }
 
     //-------------------------- Past Versions (graveyard)----------------------------
+    //// Get a given model (in some point of time) and a move
+    //// Check if winning or losinng and if not any of those evaluate the connectivity, return appropriate number
+    //private int WinninLosingConnectivity(Move move, Model m)
+    //{
+    //    int maxme = ConnectivityScore(move, m);
+    //    if (maxme == m.GetPiecesByBool(move.pieceToMove.player).Count)
+    //    {
+    //        return 10000;
+    //    }
+    //    else if (m.checkwin(!move.pieceToMove.player))
+    //    {
+    //        return -10000;
+    //    }
+    //    float proportion = maxme / m.GetPiecesByBool(move.pieceToMove.player).Count;
+    //    return (int)proportion;
+    //}
     //// Get and x and y index
     //// Return distance 
     //private int CalcDistanceBetween2Points(Vector2Int first, Vector2Int second)
