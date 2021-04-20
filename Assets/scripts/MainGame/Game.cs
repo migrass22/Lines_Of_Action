@@ -60,11 +60,10 @@ public class Game : MonoBehaviour
 
     private void Update()
     {
-        
+
         timeToTestSimpaleCube -= Time.deltaTime;
         if (timeToTestSimpaleCube <= 0)
         {
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             timeToTestSimpaleCube = MOVING_TIME;
             // If the game isnt over
             if (!IsGameOver())
@@ -91,8 +90,6 @@ public class Game : MonoBehaviour
                     currentplayer = !currentplayer;
                     // Update the turn counter
                     UpdateTurns();
-                    stopwatch.Stop();
-                    Debug.Log("Time to make final move - " + stopwatch.ElapsedMilliseconds / 1000 + " seconds");
                 }
                 // Activate ai if ai mode is set
                 else if (ActivateBlackAi && turnended)
@@ -114,8 +111,6 @@ public class Game : MonoBehaviour
                         UpdateTurns();
                     }
                     turnended = false;
-                    stopwatch.Stop();
-                    Debug.Log("Time to make final move - " + stopwatch.ElapsedMilliseconds / 1000 + " seconds");
                 }
 
             }
@@ -144,6 +139,7 @@ public class Game : MonoBehaviour
                 ai = new AI(model, currentai, AivsAiDepthw);
                 ActivateWhiteAi = true;
                 otherai = new AI(model, !currentai, AivsAiDepthb);
+
                 break;
             // Ai vs human player
             case "AIvsHuman":
