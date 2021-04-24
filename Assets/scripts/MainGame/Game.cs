@@ -19,7 +19,7 @@ public class Game : MonoBehaviour
     // My Model to hold data and logical functions
     public Model model = new Model();
     // True = white
-    private bool currentplayer = true;
+    private bool currentplayer;
     // True = gameover
     private bool gameover = false;
     // Prefab piece used to create the board
@@ -39,8 +39,8 @@ public class Game : MonoBehaviour
 
     // Depth for ai vs human
     private static int AivsHumanDepth = 4;
-    private static int AivsAiDepthb = 3;
-    private static int AivsAiDepthw = 3;
+    private static int AivsAiDepthb = 4;
+    private static int AivsAiDepthw = 4;
 
     float timeToTestSimpaleCube;
 
@@ -52,9 +52,8 @@ public class Game : MonoBehaviour
     void Start()
     {
         timeToTestSimpaleCube = MOVING_TIME;
-        mode = ModeNameController.modetype;
         TurnOffTexts();
-        ActivateOption(mode);
+        //ActivateOption();
         InitializeGame();
     }
 
@@ -92,7 +91,7 @@ public class Game : MonoBehaviour
                     UpdateTurns();
                 }
                 // Activate ai if ai mode is set
-                else if (ActivateBlackAi && turnended)
+                else if ((ActivateBlackAi || ActivateWhiteAi) && turnended)
                 {
                     // increment
                     turncounter++;
@@ -100,7 +99,7 @@ public class Game : MonoBehaviour
                     currentplayer = !currentplayer;
                     // Update the turn counter
                     UpdateTurns();
-                    if (!currentplayer)
+                    if (currentplayer != ModeNameController.HumanPlayerColor)
                     {
                         ai.mainModel = model;
                         ai.turncounter = turncounter;
@@ -128,9 +127,9 @@ public class Game : MonoBehaviour
     }
 
     // Get a toggle script and activate the selected game mode chosen on the main menu
-    private void ActivateOption(string s)
+    private void ActivateOption()
     {
-        switch (s)
+        switch (ModeNameController.modetype)
         {
             // Ai vs Ai
             case "PureAi":
@@ -143,11 +142,12 @@ public class Game : MonoBehaviour
                 break;
             // Ai vs human player
             case "AIvsHuman":
-                ActivateWhiteAi = false;
-                currentai = false;
+                currentplayer = ModeNameController.HumanPlayerColor;
+                ActivateWhiteAi = currentplayer ? false : true;
+                currentai = !currentplayer;
+                turnended = currentplayer ? false : true;
                 ai = new AI(model, currentai, AivsHumanDepth);
-                ActivateBlackAi = true;
-                currentplayer = true;
+                ActivateBlackAi = currentplayer ? true : false;
                 break;
             // Human player vs human player
             case "1V1":
@@ -229,10 +229,9 @@ public class Game : MonoBehaviour
         CreateBlackPiecesNormal();
         // Game always begins with white to move, since we want to display the turns correctly we make black be the starting position
         // So it will change in NextTurn function
-        currentplayer = true;
+        ActivateOption();
         gameover = false;
         turncounter = 1;
-        turnended = false;
         UpdateTurns();
     }
 
@@ -253,7 +252,7 @@ public class Game : MonoBehaviour
     public void UpdateTurns()
     {
         // Display message for current player
-        if (currentplayer)
+        if (turncounter % 2 != 0)
         {
             GameObject.FindGameObjectWithTag("TurnText").GetComponent<Text>().text = "Turn:" + turncounter + "\nWhite player move";
         }
@@ -387,7 +386,6 @@ public class Game : MonoBehaviour
         move.pieceToMove.piece.GetComponent<LOAman>().DestroyMovePlates();
         // Make said move on the bit board
     }
-
 
 }
 

@@ -7,17 +7,15 @@ public class BitBoard
     // Bit board of the places i check in my check win method
     public long checkedthis { get; set; }
     // The board 
-    long board { get; set; }
+    public long board { get; set; }
     // Whites position
-    long whites { get; set; }
+    public long whites { get; set; }
     // Blacks position
-    long blacks { get; set; }
+    public long blacks { get; set; }
     // Array for the directions that i can move in
     Vector2Int[] directions = new Vector2Int[9];
 
-    
     // ----------------------------------- Constructors and initializers --------------------------------------------
-
 
     // Init all bit boards and possible direction for movement
     public BitBoard()
@@ -59,16 +57,13 @@ public class BitBoard
         checkedthis = 0b0;
     }
 
-
     // ----------------------------------------- Getters and setters ------------------------------------------------
-
 
     // Return a board of the empty positions in the board
     public long GetEmptyPositions()
     {
         return (board ^ 1) & 0;
     }
-
 
     // Get a bool and return that players bitboard for his pieces
     public long GetCurrentPlayersBoard(bool player)
@@ -83,10 +78,7 @@ public class BitBoard
         }
     }
 
-
-
     // --------------------------------------------- Core Methods ---------------------------------------------------
-
 
     // Get an index and a player
     // Check for the number of adjecent piece to that index 

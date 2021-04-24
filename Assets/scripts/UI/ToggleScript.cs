@@ -13,6 +13,7 @@ public class ToggleScript : MonoBehaviour
     {
         go = this.gameObject;
     }
+    
 
     public Toggle CurrentSelected()
     {

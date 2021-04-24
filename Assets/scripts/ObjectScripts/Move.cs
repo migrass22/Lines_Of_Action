@@ -27,13 +27,6 @@ public class Move
         this.attack = attack;
     }
 
-    // Half full contructor that only recieves a location to move to and if its an attack or not
-    public Move(Vector2Int moveto, bool attack)
-    {
-        this.moveto = moveto;
-        this.attack = attack;
-    }
-
     // Empty contructor that initilizes every variable to 0 or null
     public Move() 
     {
@@ -56,7 +49,7 @@ public class Move
 
     // -------------------------------------------------------- Utility Functions ------------------------------------------------------------
 
-    // A to string function that shows starting location and an end location
+    //A to string function that shows starting location and an end location
     public override string ToString()
     {
         return this.pieceToMove.ToString() + " -> " + this.moveto.ToString();

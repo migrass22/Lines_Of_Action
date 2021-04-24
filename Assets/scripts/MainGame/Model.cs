@@ -38,6 +38,15 @@ public class Model
     public int SumOfDistWhite;
     public int SumOfDistBlack;
 
+    // Data structure to give points to certain squares on the board
+    public int[] PositionArray = { -10, -5, -5, -5, -5, -5, -5, -10,
+                                    -5, 5, 5, 5, 5, 5, 5, -5,
+                                    -5, 5, 10, 10, 10, 10, 5, -5,
+                                    -5, 5, 10, 20, 20, 10, 5, -5,
+                                    -5, 5, 10, 20, 20, 10, 5, -5,
+                                    -5, 5, 10, 10, 10, 10, 5, -5,
+                                    -5, 5, 5, 5, 5, 5, 5, -5,
+                                    -10, -5, -5, -5, -5, -5, -5, -10,};
 
     // ----------------------------------- Constructors ----------------------------------
 
@@ -178,23 +187,16 @@ public class Model
         // Save the current pieces position and the corrospondaning index
         Vector2Int pos = p.position;
         int index = board.PositionToIndex(pos);
-        // Check if said position hasnt been checked before
-        if ((board.checkedthis & board.TurnIndexToBitBoard(index)) == 0)
+        // Find the amount of of adjacent of pieces
+        number = board.FindLines(index, currentplayer);
+        if (number == GetPiecesByBool(currentplayer).Count)
         {
-            // Find the amount of of adjacent of pieces
-            number = board.FindLines(index, currentplayer);
-            if (number == GetPiecesByBool(currentplayer).Count)
-            {
-                return true;
-            }
-            else 
-            {
-                return false;
-            }
-            
+            return true;
         }
-        
-        return false;
+        else 
+        {
+            return false;
+        }
     }
 
     // Second try of the make move method
@@ -402,9 +404,12 @@ public class Model
                     // Is this piece an enemy Piece?
                     if (board.IsEnemy(endPoint, p.player))
                     {
-                        int score = MiddleSquares(endPoint);
-                        //int score = -BadSquares(endPoint);
-                        score -= BadSquares(endPoint);
+                        //int score = MiddleSquares(endPoint);
+                        ////int score = -BadSquares(endPoint);
+                        //score -= BadSquares(endPoint);
+
+                        int score = PositionArray[p.position.x + p.position.y*8];
+
 
                         // Create a new attack move at this point, save on the piece,
                         futuremoves.Add(new Move(new Piece(p), endPoint, score, true));
@@ -412,9 +417,10 @@ public class Model
                 }
                 else
                 {
-                    int score = MiddleSquares(endPoint);
-                    score -= BadSquares(endPoint);
+                    //int score = MiddleSquares(endPoint);
+                    //score -= BadSquares(endPoint);
                     //int score = -BadSquares(endPoint);
+                    int score = PositionArray[p.position.x + p.position.y * 8];
 
                     // No piece at end point -> create a new normal move
                     futuremoves.Add(new Move(new Piece(p), endPoint, score, false));
@@ -540,7 +546,7 @@ public class Model
     // ------------------------------------ Core ai methods --------------------------------
 
     // Second try of the undo move method
-    public void Undomove(Move move) 
+    public void Undomove(Move move)
     {
         // First take care of of the main data structure
         UndoChangePosition(move);
@@ -622,9 +628,9 @@ public class Model
 
     // Get a given model (in some point of time) and a move
     // Reward begin away from frame of board
-    private int BadSquares(Vector2Int moveto)
+    public int BadSquares(Vector2Int moveto)
     {
-        return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 10 : 0;
+        return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 20 : 0;
     }
 
     // Get the avg position of a certain player
@@ -680,6 +686,36 @@ public class Model
 
 
     //-------------------------------------------- GraveYard ----------------------------------------------
+    //public bool checkwin(bool currentplayer)
+    //{
+    //    int number = 0;
+    //    board.InitCheckedThis();
+    //    // If the number of any players piece is 1 than the game is finished
+    //    if (GetPiecesByBool(currentplayer).Count == 1) { return true; }
+    //    // Get a single piece
+    //    Piece p = GetPiecesByBool(currentplayer).First().Value;
+    //    // Save the current pieces position and the corrospondaning index
+    //    Vector2Int pos = p.position;
+    //    int index = board.PositionToIndex(pos);
+    //    // Check if said position hasnt been checked before
+    //    if ((board.checkedthis & board.TurnIndexToBitBoard(index)) == 0)
+    //    {
+    //        // Find the amount of of adjacent of pieces
+    //        number = board.FindLines(index, currentplayer);
+    //        if (number == GetPiecesByBool(currentplayer).Count)
+    //        {
+    //            return true;
+    //        }
+    //        else
+    //        {
+    //            return false;
+    //        }
+
+    //    }
+
+    //    return false;
+    //}
+
     // Get a piece and return where it can go to using move arrays
     //public void PossibleMovesImproved(Piece p)
     //{

@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="AI">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Nested Types" Collapsed="false" />
+    </Compartments>
+    <NestedTypes>
+      <Enum Name="AI.AItypes" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Assets\scripts\MainGame\AI.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Enum>
+      <Enum Name="AI.Flag" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Assets\scripts\MainGame\AI.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Enum>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>RDABGMEYAABaKAFBAAQwAhQAAAhBBCGDFAI4FEgAsAA=</HashCode>
+      <FileName>Assets\scripts\MainGame\AI.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="BitBoard">
+    <Position X="3" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AgAkAAABgAAEAAABAAAEAQAAAAAEAggQIQQAgEECBAA=</HashCode>
+      <FileName>Assets\scripts\ObjectScripts\BitOperations.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Move">
+    <Position X="6" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAEAAAYAAAAACAAAACAAAAAAAAAAAA=</HashCode>
+      <FileName>Assets\scripts\ObjectScripts\Move.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModeNameController">
+    <Position X="10" Y="1.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAEAAAAAA=</HashCode>
+      <FileName>Assets\scripts\UI\ModeNameController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MainMenu">
+    <Position X="11.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAAAAAAAAACAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Assets\scripts\UI\MainMenu.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
