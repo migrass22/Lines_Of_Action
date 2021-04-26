@@ -1,7 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
 using System;
 // Class for all logical expression
 public class Model
@@ -183,20 +181,25 @@ public class Model
         // If the number of any players piece is 1 than the game is finished
         if (GetPiecesByBool(currentplayer).Count == 1) { return true; }
         // Get a single piece
-        Piece p = GetPiecesByBool(currentplayer).First().Value;
-        // Save the current pieces position and the corrospondaning index
-        Vector2Int pos = p.position;
-        int index = board.PositionToIndex(pos);
-        // Find the amount of of adjacent of pieces
-        number = board.FindLines(index, currentplayer);
-        if (number == GetPiecesByBool(currentplayer).Count)
+        foreach (Piece p in GetPiecesByBool(currentplayer).Values) 
         {
-            return true;
+            // Save the current pieces position and the corrospondaning index
+            Vector2Int pos = p.position;
+            int index = board.PositionToIndex(pos);
+            // Find the amount of of adjacent of pieces
+            number = board.FindLines(index, currentplayer);
+            // If the number of pieces connected is the total amount of all pieces than the game is over
+            if (number == GetPiecesByBool(currentplayer).Count)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
-        else 
-        {
-            return false;
-        }
+        return false;
+
     }
 
     // Second try of the make move method
@@ -459,89 +462,7 @@ public class Model
     }
     // Get a certain player
     // Find all the moves that player can make at the current state of the board
-    public List<Move> GenerateAllMoves(bool player, List<KillerMove> killers)
-    {
-        List<Move> moves = new List<Move>(96);
-        foreach (Piece p in GetPiecesByBool(player).Values)
-        {
-            FutureMovesImproved(p, moves, killers);
-        }
-        return moves;
-    }
-    // Get a piece and return where it can go to using move arrays
-    public List<Move> FutureMovesImproved(Piece p, List<Move> futuremoves, List<KillerMove> killers)
-    {
-        Vector2Int position = p.position;
-        // y position is amount of pieces in this num of col
-        // x position is number of pieces in this num of row
-        int colmove = col[position.x];
-        int rowmove = row[position.y];
-        // Turn a position to the index of correct diagonal
-        int pdiagmove = pdiagonal[position.y - position.x + 7];
-        int sdiagmove = sdiagonal[position.y + position.x];
 
-        // Check for col moves of piece
-        MoveInAline(p, futuremoves, new Vector2Int(position.x, position.y + colmove), new Vector2Int(0, 1));
-        MoveInAline(p, futuremoves, new Vector2Int(position.x, position.y - colmove), new Vector2Int(0, -1));
-
-        // Check for row moves of piece
-        MoveInAline(p, futuremoves, new Vector2Int(position.x + rowmove, position.y), new Vector2Int(1, 0));
-        MoveInAline(p, futuremoves, new Vector2Int(position.x - rowmove, position.y), new Vector2Int(-1, 0));
-
-        // Check for the primary diagonal of the piece
-        MoveInAline(p, futuremoves, new Vector2Int(position.x + pdiagmove, position.y + pdiagmove), new Vector2Int(1, 1));
-        MoveInAline(p, futuremoves, new Vector2Int(position.x - pdiagmove, position.y - pdiagmove), new Vector2Int(-1, -1));
-
-        // Check for the secondery diagonal of the piece
-        MoveInAline(p, futuremoves, new Vector2Int(position.x + sdiagmove, position.y - sdiagmove), new Vector2Int(1, -1));
-        MoveInAline(p, futuremoves, new Vector2Int(position.x - sdiagmove, position.y + sdiagmove), new Vector2Int(-1, 1));
-        return futuremoves;
-    }
-    // Get a piece, an endpoint and a direction
-    // Add a new move to the pieces possible moves if said move is possible
-    public void MoveInAline(Piece p, List<Move> futuremoves, Vector2Int endPoint, Vector2Int dir, List<KillerMove> killers)
-    {
-        // Check for the column of this piece
-        // End point is on the board?
-        if (IsOnBoard(endPoint.x, endPoint.y))
-        {
-            // Are there enemy pieces i jump over?
-            if (!board.IsEnemyBeforeHere(p.position, endPoint, dir, p.player))
-            {
-                // Is there a piece at the end?
-                if (board.IsPieceHere(endPoint))
-                {
-                    // Is this piece an enemy Piece?
-                    if (board.IsEnemy(endPoint, p.player))
-                    {
-                        int score = MiddleSquares(endPoint);
-                        score -= BadSquares(endPoint);
-                        Move move = new Move(new Piece(p), endPoint, score, true);
-                        KillerMove km;
-                        if ((km = killers.Find(item => item.ToString() == move.ToString())) != null) 
-                        {
-                            km.found = true;
-                        }
-                        // Create a new attack move at this point, save on the piece,
-                        futuremoves.Add(move);
-                    }
-                }
-                else
-                {
-                    int score = MiddleSquares(endPoint);
-                    score -= BadSquares(endPoint);
-                    Move move = new Move(new Piece(p), endPoint, score, false);
-                    KillerMove km;
-                    if ((km = killers.Find(item => item.ToString() == move.ToString())) != null)
-                    {
-                        km.found = true;
-                    }
-                    // No piece at end point -> create a new normal move
-                    futuremoves.Add(move);
-                }
-            }
-        }
-    }
 
     // ------------------------------------ Core ai methods --------------------------------
 
@@ -626,24 +547,6 @@ public class Model
 
     }
 
-    // Get a given model (in some point of time) and a move
-    // Reward begin away from frame of board
-    public int BadSquares(Vector2Int moveto)
-    {
-        return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 20 : 0;
-    }
-
-    // Get the avg position of a certain player
-    // Evaluate distance from the middle of the board
-    private int MiddleSquares(Vector2Int pos)
-    {
-        if ((pos.x == 3 || pos.x == 4) && (pos.y == 3 || pos.y == 4))
-        {
-            return 10;
-        }
-        return 0;
-    }
-
 
     // -------------------------------------------- Utility ------------------------------------------------
 
@@ -677,7 +580,7 @@ public class Model
         return (x < 8 && x >= 0) && (y < 8 && y >= 0);
     }
 
-    // Get a Certain piece and remove it from its list
+    // Get a Certain piece and remove it from its dictionary
     public void RemovePiece(Piece p)
     {
         // Use its "player" to get the right list
@@ -853,6 +756,107 @@ public class Model
     //    // If not found return null
     //    return null;
     //}
+    //public List<Move> GenerateAllMoves(bool player, List<KillerMove> killers)
+    //{
+    //    List<Move> moves = new List<Move>(96);
+    //    foreach (Piece p in GetPiecesByBool(player).Values)
+    //    {
+    //        FutureMovesImproved(p, moves, killers);
+    //    }
+    //    return moves;
+    //}
+    //// Get a piece and return where it can go to using move arrays
+    //public List<Move> FutureMovesImproved(Piece p, List<Move> futuremoves, List<KillerMove> killers)
+    //{
+    //    Vector2Int position = p.position;
+    //    // y position is amount of pieces in this num of col
+    //    // x position is number of pieces in this num of row
+    //    int colmove = col[position.x];
+    //    int rowmove = row[position.y];
+    //    // Turn a position to the index of correct diagonal
+    //    int pdiagmove = pdiagonal[position.y - position.x + 7];
+    //    int sdiagmove = sdiagonal[position.y + position.x];
+
+    //    // Check for col moves of piece
+    //    MoveInAline(p, futuremoves, new Vector2Int(position.x, position.y + colmove), new Vector2Int(0, 1));
+    //    MoveInAline(p, futuremoves, new Vector2Int(position.x, position.y - colmove), new Vector2Int(0, -1));
+
+    //    // Check for row moves of piece
+    //    MoveInAline(p, futuremoves, new Vector2Int(position.x + rowmove, position.y), new Vector2Int(1, 0));
+    //    MoveInAline(p, futuremoves, new Vector2Int(position.x - rowmove, position.y), new Vector2Int(-1, 0));
+
+    //    // Check for the primary diagonal of the piece
+    //    MoveInAline(p, futuremoves, new Vector2Int(position.x + pdiagmove, position.y + pdiagmove), new Vector2Int(1, 1));
+    //    MoveInAline(p, futuremoves, new Vector2Int(position.x - pdiagmove, position.y - pdiagmove), new Vector2Int(-1, -1));
+
+    //    // Check for the secondery diagonal of the piece
+    //    MoveInAline(p, futuremoves, new Vector2Int(position.x + sdiagmove, position.y - sdiagmove), new Vector2Int(1, -1));
+    //    MoveInAline(p, futuremoves, new Vector2Int(position.x - sdiagmove, position.y + sdiagmove), new Vector2Int(-1, 1));
+    //    return futuremoves;
+    //}
+    //// Get a piece, an endpoint and a direction
+    //// Add a new move to the pieces possible moves if said move is possible
+    //public void MoveInAline(Piece p, List<Move> futuremoves, Vector2Int endPoint, Vector2Int dir, List<KillerMove> killers)
+    //{
+    //    // Check for the column of this piece
+    //    // End point is on the board?
+    //    if (IsOnBoard(endPoint.x, endPoint.y))
+    //    {
+    //        // Are there enemy pieces i jump over?
+    //        if (!board.IsEnemyBeforeHere(p.position, endPoint, dir, p.player))
+    //        {
+    //            // Is there a piece at the end?
+    //            if (board.IsPieceHere(endPoint))
+    //            {
+    //                // Is this piece an enemy Piece?
+    //                if (board.IsEnemy(endPoint, p.player))
+    //                {
+    //                    int score = MiddleSquares(endPoint);
+    //                    score -= BadSquares(endPoint);
+    //                    Move move = new Move(new Piece(p), endPoint, score, true);
+    //                    KillerMove km;
+    //                    if ((km = killers.Find(item => item.ToString() == move.ToString())) != null) 
+    //                    {
+    //                        km.found = true;
+    //                    }
+    //                    // Create a new attack move at this point, save on the piece,
+    //                    futuremoves.Add(move);
+    //                }
+    //            }
+    //            else
+    //            {
+    //                int score = MiddleSquares(endPoint);
+    //                score -= BadSquares(endPoint);
+    //                Move move = new Move(new Piece(p), endPoint, score, false);
+    //                KillerMove km;
+    //                if ((km = killers.Find(item => item.ToString() == move.ToString())) != null)
+    //                {
+    //                    km.found = true;
+    //                }
+    //                // No piece at end point -> create a new normal move
+    //                futuremoves.Add(move);
+    //            }
+    //        }
+    //    }
+    //}
+    //// Get a given model (in some point of time) and a move
+    //// Reward begin away from frame of board
+    //public int BadSquares(Vector2Int moveto)
+    //{
+    //    return (moveto.x == 0 || moveto.y == 0 || moveto.x == 7 || moveto.y == 7) ? 20 : 0;
+    //}
+
+    //// Get the avg position of a certain player
+    //// Evaluate distance from the middle of the board
+    //private int MiddleSquares(Vector2Int pos)
+    //{
+    //    if ((pos.x == 3 || pos.x == 4) && (pos.y == 3 || pos.y == 4))
+    //    {
+    //        return 10;
+    //    }
+    //    return 0;
+    //}
+
 }
 
 

@@ -1,53 +1,127 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
   <Class Name="AI">
-    <Position X="0.5" Y="0.5" Width="1.5" />
+    <Position X="3.25" Y="1" Width="2.25" />
     <Compartments>
       <Compartment Name="Nested Types" Collapsed="false" />
     </Compartments>
     <NestedTypes>
-      <Enum Name="AI.AItypes" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>Assets\scripts\MainGame\AI.cs</NewMemberFileName>
-        </TypeIdentifier>
-      </Enum>
-      <Enum Name="AI.Flag" Collapsed="true">
+      <Enum Name="AI.AItypes">
         <TypeIdentifier>
           <NewMemberFileName>Assets\scripts\MainGame\AI.cs</NewMemberFileName>
         </TypeIdentifier>
       </Enum>
     </NestedTypes>
     <TypeIdentifier>
-      <HashCode>RDABGMEYAABaKAFBAAQwAhQAAAhBBCGDFAI4FEgAsAA=</HashCode>
+      <HashCode>RAABGMEYAABaKAFBAAAgAgQIAABBDCGDFAI4FEgAMAA=</HashCode>
       <FileName>Assets\scripts\MainGame\AI.cs</FileName>
     </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="mainModel" />
+      <Field Name="temp" />
+    </ShowAsAssociation>
+    <ShowAsCollectionAssociation>
+      <Field Name="table" />
+    </ShowAsCollectionAssociation>
   </Class>
   <Class Name="BitBoard">
-    <Position X="3" Y="1" Width="1.5" />
+    <Position X="13" Y="7.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AgAkAAABgAAEAAABAAAEAQAAAAAEAggQIQQAgEECBAA=</HashCode>
       <FileName>Assets\scripts\ObjectScripts\BitOperations.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Move">
-    <Position X="6" Y="1" Width="1.5" />
+    <Position X="9.75" Y="0.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAEAAAYAAAAACAAAACAAAAAAAAAAAA=</HashCode>
       <FileName>Assets\scripts\ObjectScripts\Move.cs</FileName>
     </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="pieceToMove" />
+    </ShowAsAssociation>
   </Class>
   <Class Name="ModeNameController">
-    <Position X="10" Y="1.25" Width="1.5" />
+    <Position X="16.75" Y="4.5" Width="2.25" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAEAAAAAA=</HashCode>
       <FileName>Assets\scripts\UI\ModeNameController.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MainMenu">
-    <Position X="11.5" Y="3.5" Width="1.5" />
+    <Position X="15" Y="7.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAABAAAAAAAAAACAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Assets\scripts\UI\MainMenu.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CachedData">
+    <Position X="0.75" Y="8.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAIAAAAAA=</HashCode>
+      <FileName>Assets\scripts\ObjectScripts\CachedData.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Game">
+    <Position X="6.25" Y="1" Width="2" />
+    <TypeIdentifier>
+      <HashCode>QAQAgIBIAyCRgACAACCAAhEAAAAAAEEwIMIAIECIoAA=</HashCode>
+      <FileName>Assets\scripts\MainGame\Game.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="ai" />
+      <Field Name="model" />
+      <Field Name="otherai" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="LOAman">
+    <Position X="13.25" Y="0.75" Width="1.75" />
+    <AssociationLine Name="model" Type="Model" ManuallyRouted="true">
+      <Path>
+        <Point X="15" Y="3.062" />
+        <Point X="15.375" Y="3.062" />
+        <Point X="15.375" Y="6.823" />
+        <Point X="11.75" Y="6.823" />
+      </Path>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>IAQQQAAEAIAAiAFAAICAQIBAACAAQAABAEAAAAAKAAA=</HashCode>
+      <FileName>Assets\scripts\MainGame\LOAman.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="model" />
+      <Field Name="p" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Model">
+    <Position X="9" Y="5.75" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAYBEYAAElgAAAAmAAAEAQACIAgiAwgAJBAEgAAAJEA=</HashCode>
+      <FileName>Assets\scripts\MainGame\Model.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="board" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="MovePlate">
+    <Position X="16.5" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAIAAAAACAAgAEABAAAAAAAADAAAACAAAAAAAACAAA=</HashCode>
+      <FileName>Assets\scripts\ObjectScripts\MovePlate.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Piece">
+    <Position X="9.75" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAEAAAAIAAAAAAAAAAhAAAAAAAAAAA=</HashCode>
+      <FileName>Assets\scripts\ObjectScripts\Piece.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ToggleScript">
+    <Position X="17.25" Y="7" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAAAACAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAQAA=</HashCode>
+      <FileName>Assets\scripts\UI\ToggleScript.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Font Name="Segoe UI" Size="9" />

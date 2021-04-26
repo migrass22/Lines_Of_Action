@@ -1,17 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-using UnityEngine.Profiling;
 
 public class AI
 {
 
-    // TODO: add killer hueristic
-    // TODO: get to depth 5 under 2 sec
-    // TODO: get to depth 4 under 1 sec
-    //
     // -------------------------------- Variables---------------------------------------
 
     // Trying out transposition table
@@ -21,15 +14,10 @@ public class AI
     // Enum for different types of ai's
     public enum AItypes
     {
-        NegaScout, NegaMax, nothing
+        NegaScout, NegaMax, DebugMode
     }   
 
-    private AItypes type = AItypes.NegaScout;
-
-    public enum Flag
-    {
-        VALUE, UPPERBOUND, LOWERBOUND
-    }
+    private AItypes type = AItypes.DebugMode;
 
 
     // Data structure to save sizes of distances
@@ -58,8 +46,6 @@ public class AI
     // Search depth for ai
     public int searchDepth;
 
-    // Qs search depth
-    private int qsDepth = 1;
     // What player the ai is playing as
     public bool aiplayer;
 
@@ -67,13 +53,12 @@ public class AI
     private List<KillerMove>[] killers;
 
     // Static variable for evaluate functions
-    private const int MyGroupScoreMultiplier = 20;
-    private const int EnemyGroupScoreMultiplier = 10;
-    private const int MyPositionMultiplier = 800;
-    private const int EnemyPositionMultiplier = 600;
+    private const int MyPositionMultiplier = 1200;
+    private const int EnemyPositionMultiplier = 800;
     private int nodes = 0;
     private int leaves = 0;
-
+    private int tthits = 0;
+    private bool qsflag = false;
     private long time = 0;
     private long alltime = 0;
     private long evaltime = 0;
@@ -125,18 +110,51 @@ public class AI
         }
     }
 
-
-    // Get a position on a board
-    // return the index it will have on the board
-    private int TurnPosToIndex(Vector2Int pos) 
-    {
-        return pos.x + pos.y * 8;
-    }
-
     // Base function to start the ai and make a move
     public void StartAi()
     {
-        counter ++;
+        table = new Dictionary<string, CachedData>(10000000);
+
+        // Variable to save the best move made
+        Move bestMove = new Move();
+        bestMove.score = int.MinValue;
+        
+        // Current score of the move
+        int current = 0;
+
+        // List of all possible moves for the current player (black)
+        List<Move> possibleMoves = mainModel.GenerateAllMoves(aiplayer);
+
+        // Trying out move ordering
+        SimpleMoveOrdering(possibleMoves);
+
+        // Temporary model to play on with the ai
+        temp = new Model(mainModel);
+
+        foreach (Move move in possibleMoves)
+        {
+            // make the move on the model
+            temp.MakeMove(move);
+
+            current = ActivateTypeOfAi();
+
+            // undo the move
+            temp.Undomove(move);
+
+            // If the current move is better then the best one yet than save it
+            if (current > bestMove.score)
+            {
+                bestMove = new Move(move);
+                bestMove.score = current;
+            }
+        }
+        // Make an actuall move using the best move given by chosen algorithem
+        actuallymove(bestMove);
+    }
+    // Base function to start the ai and make a move
+    public void StartAiWithDebug()
+    {
+        counter++;
         nodes = 0;
         leaves = 0;
         MoveMaking = 0;
@@ -144,12 +162,13 @@ public class AI
         StartingAI = 0;
         transtime = 0;
         functioncalls = 0;
+        tthits = 0;
         table = new Dictionary<string, CachedData>(10000000);
 
         // Variable to save the best move made
         Move bestMove = new Move();
         bestMove.score = int.MinValue;
-        
+
         // Current score of the move
         int current = 0;
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
@@ -200,14 +219,15 @@ public class AI
         Debug.Log("Move made - " + bestMove + " score: " + bestMove.score);
         Debug.Log("amount of nodes " + nodes);
         Debug.Log("amount of leaves " + leaves);
-        Debug.Log("average time spent deciding the move - " + alltime/counter + " milliseconds" + "\n Current depth - " + searchDepth);
+        Debug.Log("average time spent deciding the move - " + alltime / counter + " milliseconds" + "\n Current depth - " + searchDepth);
         Debug.Log("amount of time spent on starting ai " + StartingAI.ToString() + " milliseconds");
         Debug.Log("amount of time spent on move generation " + time.ToString() + " milliseconds");
         Debug.Log("amount of time spent on move making " + MoveMaking.ToString() + " milliseconds");
         Debug.Log("amount of time spent on move undoing " + MoveUndoing.ToString() + " milliseconds");
         Debug.Log("amount of time spent on transposition table " + transtime.ToString() + " milliseconds");
-        Debug.Log("amount of function calls " + functioncalls.ToString() + " calls") ;
+        Debug.Log("amount of function calls " + functioncalls.ToString() + " calls");
         Debug.Log("amount of time spent on evaluation " + evaltime.ToString() + " milliseconds");
+        Debug.Log("amount of tt hits " + tthits.ToString() + " times");
         sw2 = System.Diagnostics.Stopwatch.StartNew();
         // Actually make a move 
         actuallymove(bestMove);
@@ -225,8 +245,8 @@ public class AI
                 return -NegaMax(-10000, 10000, !aiplayer, 1);
             case (AItypes.NegaScout):
                 return -NegaScout(-10000, 10000, !aiplayer, 1);
-            case(AItypes.nothing):
-                return -negamax2(!aiplayer, 1);
+            case(AItypes.DebugMode):
+                return -NegaScoutWithDebugging(-10000, 10000, !aiplayer, 1);
             default:
                 break;
         }
@@ -241,26 +261,10 @@ public class AI
     {
         int a = alpha;
         char[] chars = new char[16];
-        HashCode(chars);
+        HashCode();
         if (table.TryGetValue(new string(chars), out CachedData cd) && cd.depth <= depth)
         {
-            if (cd.flag == Flag.VALUE)
-            {
-                return cd.score;
-            }
-            else if (cd.flag == Flag.LOWERBOUND)
-            {
-                alpha = max(alpha, cd.score);
-            }
-            else if (cd.flag == Flag.UPPERBOUND)
-            {
-                beta = min(beta, cd.score);
-            }
-
-            if (alpha >= beta)
-            {
-                return cd.score;
-            }
+            return cd.score;
         }
 
         cd = new CachedData();
@@ -296,20 +300,6 @@ public class AI
                 break;
             }
         }
-
-        cd.score = eval;
-        if (eval <= a)
-        {
-            cd.flag = Flag.UPPERBOUND;
-        }
-        else if (eval >= beta)
-        {
-            cd.flag = Flag.LOWERBOUND;
-        }
-        else
-        {
-            cd.flag = Flag.VALUE;
-        }
         cd.depth = depth;
         table[new string(chars)] = cd;
         return eval;
@@ -318,41 +308,103 @@ public class AI
     // Try #3 on negascout recursion -> (no evaluate) depth 4 = <1 sec | d 5 = 5 sec | d 6 = 20 sec 1,520,000 positions searched
     private int NegaScout(int alpha, int beta, bool currentplayer, int depth)
     {
-        //var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        //int originalalpha = alpha;
-        //char[] chars = new char[16];
-        //HashCode(chars);
-        //if (table.TryGetValue(new string(chars), out CachedData cd) && cd.depth <= depth)
-        //{
-        //    if (cd.flag == Flag.VALUE)
-        //    {
-        //        return cd.score;
-        //    }
-        //    else if (cd.flag == Flag.LOWERBOUND)
-        //    {
-        //        alpha = max(alpha, cd.score);
-        //    }
-        //    else if (cd.flag == Flag.UPPERBOUND)
-        //    {
-        //        beta = min(beta, cd.score);
-        //    }
+        int eval = int.MinValue;
+        int originalalpha = alpha;
+        string key = HashCode();
+        if (table.TryGetValue(key, out CachedData cd) && cd.depth <= depth)
+        {
+            tthits++;
+            return cd.score;
+        }
 
-        //    if (alpha >= beta)
-        //    {
-        //        return cd.score;
-        //    }
-        //}
 
-        //cd = new CachedData();
-        //sw2.Stop();
-        //transtime += sw2.ElapsedMilliseconds;
-        //CachedData cd2 = new CachedData();
- 
+        CachedData cd2 = new CachedData();
+
         if (depth == searchDepth || temp.checkwin(currentplayer) || temp.checkwin(!currentplayer))
         {
+            int score = 0;
+            leaves++;
+            score = Evaluate(currentplayer, depth);
+            return score;
+        }
+        nodes++;
+
+        bool flag = true;
+
+        // Generate all possible moves
+        List<Move> moves = temp.GenerateAllMoves(currentplayer);
+
+        // Implementing move ordering
+        SimpleMoveOrdering(moves);
+
+        foreach (Move nextmove in moves)
+        {
+
+            if (flag)
+            {
+                flag = false;
+                temp.MakeMove(nextmove);
+
+                eval = -NegaScout(-beta, -alpha, !currentplayer, depth + 1);
+
+                temp.Undomove(nextmove);
+            }
+            else
+            {
+                temp.MakeMove(nextmove);
+
+                eval = -NegaScout(-(alpha + 1), -alpha, !currentplayer, depth + 1);
+
+                temp.Undomove(nextmove);
+
+                // if the current score is 
+                if (alpha < eval && eval < beta)
+                {
+                    temp.MakeMove(nextmove);
+
+                    eval = -NegaScout(-beta, -eval, !currentplayer, depth + 1);
+
+                    temp.Undomove(nextmove);
+                }
+            }
+            alpha = max(eval, alpha);
+            // Cutoff
+            if (alpha >= beta)
+            {
+                break;
+            }
+        }
+        if (alpha > originalalpha && alpha < beta)
+        {
+            cd2.score = alpha;
+            cd2.depth = depth;
+            table[key] = cd2;
+        }
+        return alpha;
+    }
+    // Try #3 on negascout recursion -> (no evaluate) depth 4 = <1 sec | d 5 = 5 sec | d 6 = 20 sec 1,520,000 positions searched
+    private int NegaScoutWithDebugging(int alpha, int beta, bool currentplayer, int depth)
+    {
+        int eval = int.MinValue;
+        var sw2 = System.Diagnostics.Stopwatch.StartNew();
+        int originalalpha = alpha;
+        string key = HashCode();
+        if (table.TryGetValue(key, out CachedData cd) && cd.depth <= depth)
+        {
+            return cd.score;
+        }
+
+
+        CachedData cd2 = new CachedData();
+        sw2.Stop();
+        transtime += sw2.ElapsedMilliseconds;
+
+        if (depth == searchDepth || temp.checkwin(currentplayer) || temp.checkwin(!currentplayer))
+        {
+            int score = 0;
             var sw3 = System.Diagnostics.Stopwatch.StartNew();
             leaves++;
-            int score = Evaluate(currentplayer, depth);
+            score = Evaluate(currentplayer, depth);
             sw3.Stop();
             evaltime += sw3.ElapsedMilliseconds;
             return score;
@@ -360,8 +412,7 @@ public class AI
         nodes++;
 
         bool flag = true;
-        int eval = int.MinValue;
-        var sw2 = System.Diagnostics.Stopwatch.StartNew();
+        sw2 = System.Diagnostics.Stopwatch.StartNew();
 
         // Generate all possible moves
         List<Move> moves = temp.GenerateAllMoves(currentplayer);
@@ -387,7 +438,7 @@ public class AI
                 sw5.Stop();
                 MoveUndoing += sw5.ElapsedMilliseconds;
             }
-            else 
+            else
             {
                 var sw4 = System.Diagnostics.Stopwatch.StartNew();
                 temp.MakeMove(nextmove);
@@ -415,7 +466,6 @@ public class AI
                     MoveUndoing += sw5.ElapsedMilliseconds;
                 }
             }
-
             alpha = max(eval, alpha);
             // Cutoff
             if (alpha >= beta)
@@ -423,176 +473,36 @@ public class AI
                 break;
             }
         }
-        //sw2 = System.Diagnostics.Stopwatch.StartNew();
-        //cd2.score = eval;
-        //if (eval <= originalalpha)
-        //{
-        //    cd.flag = Flag.LOWERBOUND;
-        //}
-        //else if (eval >= beta)
-        //{
-
-        //    cd.flag = Flag.UPPERBOUND;
-        //}
-        //else
-        //{
-        //    cd.flag = Flag.VALUE;
-        //}
-
-        //cd2.depth = depth;
-        //table[new string(chars)] = cd2;
-        //sw2.Stop();
-        //transtime += sw2.ElapsedMilliseconds;
-        return eval;
-    }
-
-    // Try #4 on negascout recursion -> (no evaluate) depth 4 = <1 sec | d 5 = 5 sec | d 6 = 20 sec 1,520,000 positions searched
-    private int NegaScoutOld(int alpha, int beta, bool currentplayer, int depth)
-    {
-        if (depth == searchDepth || temp.checkwin(currentplayer))
+        if (alpha > originalalpha && alpha < beta)
         {
-            return Evaluate(currentplayer, depth);
+            sw2 = System.Diagnostics.Stopwatch.StartNew();
+            cd2.score = alpha;
+            cd2.depth = depth;
+            table[key] = cd2;
+            sw2.Stop();
+            transtime += sw2.ElapsedMilliseconds;
         }
 
-        int a, b, t, i = 0;
-        a = alpha;
-        b = beta;
-
-        // Generate all possible moves
-        List<Move> moves = temp.GenerateAllMoves(currentplayer);
-
-        // Implementing move ordering
-        SimpleMoveOrdering(moves);
-
-        // Go over all the moves generated
-        foreach (Move nextmove in moves)
-        {
-            i++;
-            temp.MakeMove(nextmove);
-            t = -NegaScoutOld(-b, -a, !currentplayer, depth+1);
-            temp.Undomove(nextmove);
-            if (t > a && t< beta && i > 1 && depth < searchDepth-1) 
-            {
-                temp.MakeMove(nextmove);
-                a = -NegaScoutOld(-beta, -t, !currentplayer, depth + 1);
-                temp.Undomove(nextmove);
-            }
-            a = max(a, t);
-
-            nodes++;
-            if (alpha >= beta)
-            {
-                return a;
-            }
-            b = a + 1;
-        }
-        return a;
-    }
-
-    // Try #4 on the recursion (just testing now) -> this is the new liquid gold (this is diamond)
-    private int BaseReucrsion(int depth, bool currentplayer)
-    {
-        // If im at a leaf node or game has ended go back
-        if (depth == searchDepth || temp.checkwin(currentplayer) || temp.checkwin(currentplayer))
-        {
-            return Evaluate(currentplayer, depth);
-        }
-        int current = 0;
-        // Switch to other player
-        currentplayer = !currentplayer;
-
-        // Generate all possible moves
-        List<Move> moves = temp.GenerateAllMoves(currentplayer);
-
-        // Go over all the moves generated
-        foreach (Move nextmove in moves)
-        {
-            // Make possible move
-            temp.MakeMove(nextmove);
-            // Continue down the search tree
-            current = BaseReucrsion(depth + 1, currentplayer);
-            // Undo move made
-            temp.Undomove(nextmove);
-
-            if (currentplayer) 
-            {
-                
-            }
-
-        }
-        return current;
+        return alpha;
     }
 
     // Trying out Quiescence search
-    private int Quiescencesearch(Move move, int depth, Model m)
+    private int Quiescencesearch(bool currentplayer, int depth)
     {
-        if (move.attack || depth == qsDepth || m.checkwin(move.pieceToMove.player))
+        if (!qsflag || temp.checkwin(currentplayer))
         {
-            return Evaluate(move.pieceToMove.player, depth);
+            return Evaluate(currentplayer, depth);
         }
-        return NegaScout(-10000, 10000, move.pieceToMove.player, depth);
-    }
-
-    // Try #1 on negamax recrsion -> (no evaluate ) depth 4 = <1 sec | d 5 5 = 6 sec | d 6 = 21 sec 1,600,000 positions searched
-    private int negamax2(bool currentplayer, int depth)
-    {
-        if (depth == searchDepth || temp.checkwin(currentplayer) || temp.checkwin(!currentplayer))
-        {
-            leaves++;
-            return NewEvaluate(currentplayer, depth) ;
-        }
-        nodes++;
-
-        int eval = -100000;
-
-        // Generate all possible moves
-        List<Move> moves = temp.GenerateAllMoves(currentplayer);
-
-        // Implementing move ordering
-        SimpleMoveOrdering(moves);
-
-        // Go over all the moves generated
-        foreach (Move nextmove in moves)
-        {
-            temp.MakeMove(nextmove);
-            eval = max(eval, -negamax2(!currentplayer, depth + 1));
-            temp.Undomove(nextmove);
-        }
-        return eval;
+        return -NegaScout(-10000, 10000, currentplayer, depth);
     }
 
 
-    // ------------------------------- Evalution Methods -----------------------------------------
+    // ------------------------------- Evalution and move Methods -----------------------------------------
 
 
     // Get a given model (in some point of time) and a move
     // Determine score for the given state of game
     public int Evaluate(bool currentplayer, int depth) 
-    {
-        int score = 1;
-
-        if (turncounter > 5)
-        {
-            score += ImprovedWinCheck(currentplayer, depth);
-        }
-
-        score += CentralisationScore(currentplayer);
-        score -= CentralisationScore(!currentplayer);
-
-        // Turn saved average position into its actuall value (currently the sum of all positions)
-        Vector2Int avgpos = temp.GetCurrentAvg(currentplayer) / temp.GetPiecesByBool(currentplayer).Count;
-        // Better position is a position where the hezion is closest to the avg position
-        score += SumOfDistances(avgpos, currentplayer, currentplayer);
-        // Turn saved average position into its actuall value (currently the sum of all positions)
-        Vector2Int enemyavgpos = temp.GetCurrentAvg(!currentplayer) / temp.GetPiecesByBool(!currentplayer).Count;
-        // Better position is a position where the hezion is closest to the avg position
-        score -= SumOfDistances(enemyavgpos, !currentplayer, currentplayer);
-
-        return score;
-    }
-
-    // Try # 3 evaluate
-    private int NewEvaluate(bool currentplayer, int depth) 
     {
         int score = 1;
 
@@ -627,6 +537,8 @@ public class AI
         });
     }
 
+    // Get a list of moves and the current depth
+    // Add to the list the moves in the killer moves list if the move is legal in current model
     private void AddKillerMoves(List <Move> moves, int depth) 
     {
         for (int i = killers[depth].Count-1; i > -1; i--)
@@ -676,7 +588,16 @@ public class AI
         return sum / temp.GetPiecesByBool(currentplayer).Count;
     }
 
+
     // -------------------------------- Utility Methods ------------------------------------------
+
+
+    // Get a position on a board
+    // return the index it will have on the board
+    private int TurnPosToIndex(Vector2Int pos)
+    {
+        return pos.x + pos.y * 8;
+    }
 
     // Get 2 numbers and return the smaller one
     private int min(int a, int b)
@@ -727,28 +648,23 @@ public class AI
         turncounter++;
     }
 
-    // Get an array of chars and return 
-    private void HashCode(char []chars) 
+    // Get an array of chars and return the hash value of it
+    private string HashCode() 
     {
-        chars[0] = (char)(temp.board.blacks & 0xFF);
-        chars[1] = (char)(temp.board.blacks >>  8  & 0xFF);
-        chars[2] = (char)(temp.board.blacks >> 16 & 0xFF);
-        chars[3] = (char)(temp.board.blacks >> 24 & 0xFF);
-        chars[4] = (char)(temp.board.blacks >> 32 & 0xFF);
-        chars[5] = (char)(temp.board.blacks >> 40 & 0xFF);
-        chars[6] = (char)(temp.board.blacks >> 48 & 0xFF);
-        chars[7] = (char)(temp.board.blacks >> 56 & 0xFF);
-        chars[8] = (char)(temp.board.whites & 0xFF);
-        chars[9] = (char)(temp.board.whites >> 8 & 0xFF);
-        chars[10] = (char)(temp.board.whites >> 16 & 0xFF);
-        chars[11] = (char)(temp.board.whites >> 24 & 0xFF);
-        chars[12] = (char)(temp.board.whites >> 32 & 0xFF);
-        chars[13] = (char)(temp.board.whites >> 40 & 0xFF);
-        chars[14] = (char)(temp.board.whites >> 48 & 0xFF);
-        chars[15] = (char)(temp.board.whites >> 56 & 0xFF);
+        return temp.board.blacks.ToString() + temp.board.whites.ToString();
     }
 
     //-------------------------- Past Versions (graveyard)----------------------------
+    // Get cached value and a list of possible
+    // 
+    //private void AddBestMove(CachedData cd, List<Move> moves) 
+    //{
+    //    if (moves.Contains(cd.bestmove)) 
+    //    {
+    //        moves.Remove(cd.bestmove);
+    //        moves.Insert(0, cd.bestmove);
+    //    }
+    //}
     //// Get a move and a model and try to score the connectivity of the pieces of the moving piece
     //private int ConnectivityScore(Move move, Model m)
     //{
@@ -1383,5 +1299,131 @@ public class AI
     //      double score = player == currentplayer ? 1 / amountOfGroups * MyGroupScoreMultiplier : 1 / amountOfGroups * EnemyGroupScoreMultiplier;
 
     //    return (int)score;
+    //}
+    //// Try #4 on negascout recursion -> (no evaluate) depth 4 = <1 sec | d 5 = 5 sec | d 6 = 20 sec 1,520,000 positions searched
+    //private int NegaScoutOld(int alpha, int beta, bool currentplayer, int depth)
+    //{
+    //    if (depth == searchDepth || temp.checkwin(currentplayer))
+    //    {
+    //        return Evaluate(currentplayer, depth);
+    //    }
+
+    //    int a, b, t, i = 0;
+    //    a = alpha;
+    //    b = beta;
+
+    //    // Generate all possible moves
+    //    List<Move> moves = temp.GenerateAllMoves(currentplayer);
+
+    //    // Implementing move ordering
+    //    SimpleMoveOrdering(moves);
+
+    //    // Go over all the moves generated
+    //    foreach (Move nextmove in moves)
+    //    {
+    //        i++;
+    //        temp.MakeMove(nextmove);
+    //        t = -NegaScoutOld(-b, -a, !currentplayer, depth+1);
+    //        temp.Undomove(nextmove);
+    //        if (t > a && t< beta && i > 1 && depth < searchDepth-1) 
+    //        {
+    //            temp.MakeMove(nextmove);
+    //            a = -NegaScoutOld(-beta, -t, !currentplayer, depth + 1);
+    //            temp.Undomove(nextmove);
+    //        }
+    //        a = max(a, t);
+
+    //        nodes++;
+    //        if (alpha >= beta)
+    //        {
+    //            return a;
+    //        }
+    //        b = a + 1;
+    //    }
+    //    return a;
+    //}
+    //// Try #4 on the recursion (just testing now) -> this is the new liquid gold (this is diamond)
+    //private int BaseReucrsion(int depth, bool currentplayer)
+    //{
+    //    // If im at a leaf node or game has ended go back
+    //    if (depth == searchDepth || temp.checkwin(currentplayer) || temp.checkwin(currentplayer))
+    //    {
+    //        return Evaluate(currentplayer, depth);
+    //    }
+    //    int current = 0;
+    //    // Switch to other player
+    //    currentplayer = !currentplayer;
+
+    //    // Generate all possible moves
+    //    List<Move> moves = temp.GenerateAllMoves(currentplayer);
+
+    //    // Go over all the moves generated
+    //    foreach (Move nextmove in moves)
+    //    {
+    //        // Make possible move
+    //        temp.MakeMove(nextmove);
+    //        // Continue down the search tree
+    //        current = BaseReucrsion(depth + 1, currentplayer);
+    //        // Undo move made
+    //        temp.Undomove(nextmove);
+
+    //        if (currentplayer) 
+    //        {
+
+    //        }
+
+    //    }
+    //    return current;
+    //}
+    //// Try # 3 evaluate
+    //private int NewEvaluate(bool currentplayer, int depth) 
+    //{
+    //    int score = 1;
+
+    //    if (turncounter > 5)
+    //    {
+    //        score += ImprovedWinCheck(currentplayer, depth);
+    //    }
+
+    //    score += CentralisationScore(currentplayer);
+    //    score -= CentralisationScore(!currentplayer);
+
+    //    // Turn saved average position into its actuall value (currently the sum of all positions)
+    //    Vector2Int avgpos = temp.GetCurrentAvg(currentplayer) / temp.GetPiecesByBool(currentplayer).Count;
+    //    // Better position is a position where the hezion is closest to the avg position
+    //    score += SumOfDistances(avgpos, currentplayer, currentplayer);
+    //    // Turn saved average position into its actuall value (currently the sum of all positions)
+    //    Vector2Int enemyavgpos = temp.GetCurrentAvg(!currentplayer) / temp.GetPiecesByBool(!currentplayer).Count;
+    //    // Better position is a position where the hezion is closest to the avg position
+    //    score -= SumOfDistances(enemyavgpos, !currentplayer, currentplayer);
+
+    //    return score;
+    //}
+    //// Try #1 on negamax recrsion -> (no evaluate ) depth 4 = <1 sec | d 5 5 = 6 sec | d 6 = 21 sec 1,600,000 positions searched
+    //private int negamax2(bool currentplayer, int depth)
+    //{
+    //    if (depth == searchDepth || temp.checkwin(currentplayer) || temp.checkwin(!currentplayer))
+    //    {
+    //        leaves++;
+    //        return Evaluate(currentplayer, depth) ;
+    //    }
+    //    nodes++;
+
+    //    int eval = -100000;
+
+    //    // Generate all possible moves
+    //    List<Move> moves = temp.GenerateAllMoves(currentplayer);
+
+    //    // Implementing move ordering
+    //    SimpleMoveOrdering(moves);
+
+    //    // Go over all the moves generated
+    //    foreach (Move nextmove in moves)
+    //    {
+    //        temp.MakeMove(nextmove);
+    //        eval = max(eval, -negamax2(!currentplayer, depth + 1));
+    //        temp.Undomove(nextmove);
+    //    }
+    //    return eval;
     //}
 }

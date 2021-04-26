@@ -1,16 +1,11 @@
 ﻿// MADE BY TOM PELEG
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class Game : MonoBehaviour
 {
-
-
     // ------------------------------------------- Variables ----------------------------------------------------
 
 
@@ -19,7 +14,7 @@ public class Game : MonoBehaviour
     // My Model to hold data and logical functions
     public Model model = new Model();
     // True = white
-    private bool currentplayer;
+    private bool currentplayer = true;
     // True = gameover
     private bool gameover = false;
     // Prefab piece used to create the board
@@ -29,22 +24,20 @@ public class Game : MonoBehaviour
     private bool ActivateWhiteAi;
     private bool currentai;
     // Time for every turn
-    float MOVING_TIME = 1;
+    float MOVING_TIME = 1.5f;
 
     // Bool for turn ending
     public bool turnended = false;
 
-    // Set up game according to what was selected in the main menu
-    public static string mode;
-
-    // Depth for ai vs human
+    // Depth for every gamemode
     private static int AivsHumanDepth = 4;
     private static int AivsAiDepthb = 4;
     private static int AivsAiDepthw = 4;
 
     float timeToTestSimpaleCube;
-
+    // AI objects
     AI ai, otherai ;
+
     // ------------------------------------------ View Methods --------------------------------------------------
 
 
@@ -52,14 +45,13 @@ public class Game : MonoBehaviour
     void Start()
     {
         timeToTestSimpaleCube = MOVING_TIME;
-        TurnOffTexts();
-        //ActivateOption();
         InitializeGame();
     }
 
+    // Function to handle each turn end for different game modes
     private void Update()
     {
-
+        // In order for the piece to move before the ai starts add a delay to the end turn function
         timeToTestSimpaleCube -= Time.deltaTime;
         if (timeToTestSimpaleCube <= 0)
         {
@@ -71,12 +63,14 @@ public class Game : MonoBehaviour
                 if (ActivateBlackAi && ActivateWhiteAi)
                 {
                     currentai = !currentai;
+                    // First ai moving
                     if (currentai)
                     {
                         otherai.mainModel = model;
                         otherai.turncounter = turncounter;
                         otherai.StartAi();
                     }
+                    // Second ai moving
                     else
                     {
                         ai.mainModel = model;
@@ -93,23 +87,27 @@ public class Game : MonoBehaviour
                 // Activate ai if ai mode is set
                 else if ((ActivateBlackAi || ActivateWhiteAi) && turnended)
                 {
-                    // increment
-                    turncounter++;
-                    // Change player
-                    currentplayer = !currentplayer;
-                    // Update the turn counter
-                    UpdateTurns();
                     if (currentplayer != ModeNameController.HumanPlayerColor)
                     {
                         ai.mainModel = model;
                         ai.turncounter = turncounter;
-                        ai.StartAi();
+                        ai.StartAiWithDebug();
                         turncounter++;
                         currentplayer = !currentplayer;
                         // Update the turn counter
                         UpdateTurns();
+                        turnended = false;
                     }
-                    turnended = false;
+                    else 
+                    {
+                        // increment
+                        turncounter++;
+                        // Change player
+                        currentplayer = !currentplayer;
+                        // Update the turn counter
+                        UpdateTurns();
+                    }
+
                 }
 
             }
@@ -126,34 +124,36 @@ public class Game : MonoBehaviour
         }
     }
 
-    // Get a toggle script and activate the selected game mode chosen on the main menu
+    // Function to handle option chosen in main menu
     private void ActivateOption()
     {
+        // Using static class to save information chosen at different scene
         switch (ModeNameController.modetype)
         {
             // Ai vs Ai
             case "PureAi":
                 currentai = true;
                 ActivateBlackAi = true;
+                // Create both ais with right colors and activate all flags for game mode
                 ai = new AI(model, currentai, AivsAiDepthw);
                 ActivateWhiteAi = true;
                 otherai = new AI(model, !currentai, AivsAiDepthb);
-
                 break;
             // Ai vs human player
             case "AIvsHuman":
-                currentplayer = ModeNameController.HumanPlayerColor;
-                ActivateWhiteAi = currentplayer ? false : true;
-                currentai = !currentplayer;
-                turnended = currentplayer ? false : true;
+                // Based on selection made in main menu change the current players color
+                // Relative to first choice decide which ai to activate
+                ActivateWhiteAi = ModeNameController.HumanPlayerColor ? false : true;
+                currentai = !ModeNameController.HumanPlayerColor;
+                turnended = ModeNameController.HumanPlayerColor ? false : true;
                 ai = new AI(model, currentai, AivsHumanDepth);
-                ActivateBlackAi = currentplayer ? true : false;
+                ActivateBlackAi = ModeNameController.HumanPlayerColor ? true : false;
                 break;
             // Human player vs human player
             case "1V1":
+                // Regular game 
                 ActivateWhiteAi = false;
                 ActivateBlackAi = false;
-                currentplayer = true;
                 break;
             default:
                 break;
@@ -175,10 +175,14 @@ public class Game : MonoBehaviour
         model = new Model();
     }
 
+    // Function for end game position
     public void RestartGame() 
     {
+        // Remove all existing pieces
         CleanUp();
+        // Restart texts
         TurnOffTexts();
+        // Restart game
         InitializeGame();
     }
 
@@ -222,6 +226,9 @@ public class Game : MonoBehaviour
     // Starting up the game creating all 24 pieces and making them show on screen and save on lists
     public void InitializeGame()
     {
+        // Initialize turn to 1
+        turncounter = 1;
+        TurnOffTexts();
         model = new Model();
         // If this is second game make sure to get last pieces out
         CreateWhitePiecesNormal();
@@ -230,9 +237,8 @@ public class Game : MonoBehaviour
         // Game always begins with white to move, since we want to display the turns correctly we make black be the starting position
         // So it will change in NextTurn function
         ActivateOption();
+        // Turn the gameover state false
         gameover = false;
-        turncounter = 1;
-        UpdateTurns();
     }
 
     // Disable all texts and restart the turn text 
@@ -252,7 +258,7 @@ public class Game : MonoBehaviour
     public void UpdateTurns()
     {
         // Display message for current player
-        if (turncounter % 2 != 0)
+        if (currentplayer)
         {
             GameObject.FindGameObjectWithTag("TurnText").GetComponent<Text>().text = "Turn:" + turncounter + "\nWhite player move";
         }
@@ -265,7 +271,9 @@ public class Game : MonoBehaviour
     // Get a boolean for a player and decide if he won the game or not
     private void Winner(bool player)
     {
+        // Make sure to change game state to gameover
         gameover = true;
+        // Display winner text
         GameObject.FindGameObjectWithTag("WinnerText").GetComponent<Text>().enabled = true;
         if (player)
         {
@@ -275,6 +283,7 @@ public class Game : MonoBehaviour
         {
             GameObject.FindGameObjectWithTag("WinnerText").GetComponent<Text>().text = "Black player is the winner GOOD GAME";
         }
+        // Display restart button
         GameObject.FindGameObjectWithTag("RestartText").GetComponent<Text>().enabled = true;
         GameObject.FindGameObjectWithTag("RestartText").GetComponent<Text>().text = "PRESS TO RESTART";
         GameObject.FindGameObjectWithTag("RestartButton").GetComponent<Button>().interactable = true;
@@ -285,13 +294,14 @@ public class Game : MonoBehaviour
     // If both players won then this is a tie
     private void Tie() 
     {
+        // Turn winner text on and change text to a tie message
         GameObject.FindGameObjectWithTag("WinnerText").GetComponent<Text>().enabled = true;
         GameObject.FindGameObjectWithTag("WinnerText").GetComponent<Text>().text = "TIE! GOOD GAME";
+        // Also enable the restart text and clickability
         GameObject.FindGameObjectWithTag("RestartText").GetComponent<Text>().enabled = true;
         GameObject.FindGameObjectWithTag("RestartText").GetComponent<Text>().text = "PRESS TO RESTART";
         GameObject.FindGameObjectWithTag("RestartButton").GetComponent<Button>().interactable = true;
     }
-
 
     // Get a Move
     // Move piece on screen and update all databases also remove a piece if it gets eaten
@@ -307,6 +317,7 @@ public class Game : MonoBehaviour
         // Check if the player won after the move was made
         if (model.checkwin(currentplayer))
         {
+            // If both players won then this is a tie
             if (model.checkwin(!currentplayer))
             {
                 Tie();
@@ -317,6 +328,7 @@ public class Game : MonoBehaviour
                 Winner(currentplayer);
             }
         }
+        // Current player could have made a move that made the other player win
         else if(model.checkwin(!currentplayer))
         {
             Winner(!currentplayer);
@@ -356,8 +368,7 @@ public class Game : MonoBehaviour
         // If attacking then theres a piece at the endpoint of the move
         if (move.attack)
         {
-            // Get the piece using position -> this is o(n^2) get this better maybe??
-            //Piece AfterPiece = model.GetPieceByIndex(move.moveto);
+            // Get position of the piece of the other player
             Piece AfterPiece = model.GetPiecesByBool(!move.pieceToMove.player)[move.moveto];
             // Remove the piece from lists in model
             model.RemovePiece(AfterPiece);
@@ -376,15 +387,10 @@ public class Game : MonoBehaviour
         // Update array numbers and position of the pieces
         model.MakeMove(new Move(move));
         move.pieceToMove = BeforePiece;
+        // Start moving the piece on the board in unity
         move.pieceToMove.piece.GetComponent<LOAman>().StartMoving(move);
-
-        // Update the position in the unity space of the piece im moving
-        //BeforePiece.piece.GetComponent<LOAman>().SetXBoard(move.moveto.x);
-        //BeforePiece.piece.GetComponent<LOAman>().SetYBoard(move.moveto.y);
-
         // Remove move plates since move is made
         move.pieceToMove.piece.GetComponent<LOAman>().DestroyMovePlates();
-        // Make said move on the bit board
     }
 
 }

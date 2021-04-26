@@ -5,43 +5,58 @@ using UnityEngine;
 
 public class LOAman : MonoBehaviour
 {
+    // Main "Game" class that controlls everything
     public GameObject controller;
+    // Game object of a single moveplate
     public GameObject moveplate;
-    private int xBoard = -1, yBoard = -1;
-    // true = white
+    // The current position of the piece
+    private Vector2Int pos = new Vector2Int(-1,-1);
+    // True = white -> current piece's color
     public bool player = true;
+    // Sprites of both pieces
     public Sprite BlackPawn;
     public Sprite WhitePawn;
-    public Model m;
+    // The main model of the game
+    public Model model;
+    // The actuall object of the current unity piece
     public Piece p;
+    // Flag to save for the first time the current piece
     public bool flag = true;
-    private float movetox = -1, movetoy = -1;
-    private float startingx = -1, startingy = -1;
+    // Actuall unity space position (end position if piece needs to be moved)
+    private Vector2 starting = new Vector2(-1, -1);
+    private Vector2 moveto = new Vector2(-1, -1);
 
+
+    // Using update method to animate the movement of the piece on the board
     public void Update()
     {
-        if (movetox != -1 && movetoy != -1) 
+        // Since update happens every second only enter this block code once the piece has to move
+        if (moveto.y != -1 && moveto.x != -1) 
         {
-            if (this.transform.position.x != movetox || this.transform.position.y != movetoy)
+            // If the position is no already achived by current piece
+            if (this.transform.position.x != moveto.x || this.transform.position.y != moveto.y)
             {
+                // Create a step to move the piece a portion of the way as so to animate it each interval of update
                 float step = 10f * Time.deltaTime;
-
-                this.transform.position = Vector3.MoveTowards(new Vector3(startingx, startingy, -1f), new Vector3(movetox, movetoy, -1f), step);
-                startingx = this.transform.position.x;
-                startingy = this.transform.position.y;
+                // Update position on board and in script
+                this.transform.position = Vector3.MoveTowards(new Vector3(starting.x, starting.y, -1f), new Vector3(moveto.x, moveto.y, -1f), step);
+                starting.x = this.transform.position.x;
+                starting.y = this.transform.position.y;
             }
             else 
             {
-                float x = movetox;
-                float y = movetoy;
+                // After getting to end lcoation save current index
+                float x = moveto.x;
+                float y = moveto.y;
                 x /= 1.255f;
                 y /= 1.255f;
                 x -= -4.39f;
                 y -= -4.39f;
                 SetXBoard((int)x);
                 SetYBoard((int)y);
-                movetox = -1;
-                movetoy = -1;
+                // Change end position to not enter this block code again
+                moveto.x = -1;
+                moveto.y = -1;
             }
         }
     }
@@ -53,7 +68,7 @@ public class LOAman : MonoBehaviour
         controller = GameObject.FindGameObjectWithTag("GameController");
         // make the piece show on the right spot with the right sprite for this current piece
         SetCorods();
-        // Changed this bool when i made this LOAman object
+        // Based on this players color give the right sprite
         if (this.player)
         {
             this.GetComponent<SpriteRenderer>().sprite = WhitePawn;
@@ -62,14 +77,15 @@ public class LOAman : MonoBehaviour
         {
             this.GetComponent<SpriteRenderer>().sprite = BlackPawn;
         }
-        m = controller.GetComponent<Game>().model;
+        // Save main game model
+        model = controller.GetComponent<Game>().model;
     }
 
     // Used to transform given indexes of this pieces x and y to an actual good spot on the board
     public void SetCorods()
     {
         // Play around with this values to make them for my board
-        float x = xBoard, y = yBoard;
+        float x = pos.x, y = pos.y;
         x *= 1.255f;
         y *= 1.255f;
         x += -4.39f;
@@ -81,33 +97,36 @@ public class LOAman : MonoBehaviour
 
     public int GetXBoard()
     {
-        return xBoard;
+        return pos.x;
     }
 
     public int GetYBoard()
     {
-        return yBoard;
+        return pos.y;
     }
 
     public void SetXBoard(int x)
     {
-        xBoard = x;
+        pos.x = x;
     }
 
     public void SetYBoard(int y)
     {
-        yBoard = y;
+        pos.y = y;
     }
 
+    // When a piece is pressed check for endgame
+    // If not end game then generate appropriate move plates for the human player to press
     private void OnMouseUp()
     {
         bool endgame = controller.GetComponent<Game>().IsGameOver();
-        // Activate only the first time, find the piece and save it
+        // Activate only the first time, find the piece and save it to this unity piece
         if (flag) 
         {
-            p = m.GetPieceByIndex(new Vector2Int(xBoard, yBoard));
+            p = model.GetPieceByIndex(pos);
             flag = false;
         }
+        // If the game ended and the piece is pressed restart the game
         if (endgame)
         {
             controller.GetComponent<Game>().RestartGame();
@@ -115,83 +134,73 @@ public class LOAman : MonoBehaviour
         // If this is the current players piece and we dont use ai then continue
         if (player == controller.GetComponent<Game>().GetCurrentPlayer() && !endgame)
         {
+            // Destroy any last placed move plates on the board
             DestroyMovePlates();
-            List<Move> moves = new List<Move>(96);
-            m.FutureMovesImproved(p, moves);
+            // Create and save all possible moves (maximum 8 moves) to this piece using number arrays
+            List<Move> moves = new List<Move>(8);
+            model.FutureMovesImproved(p, moves);
             //m.PossibleMovesImproved(p);
             foreach (Move possiblemove in moves)
             {
+                // Create said move plate based on the gereated move
                 MovePlateSpawn(possiblemove);
             }
 
         }
     }
 
-    // get vector for position and check of its legit for moves
-    public bool CheckLegit(Vector2Int v)
-    {
-        if (m.IsOnBoard(v.x, v.y))
-        {
-            if (m.board.IsPieceHere(v))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public bool IsBefore(int x, int y, int enemyx, int enemyy) 
-    {
-        int dist1x = x - xBoard, dist2x = enemyx - xBoard, dist1y = y - yBoard, dist2y = enemyy - yBoard;
-        return Math.Abs(dist1x) <= Math.Abs(dist2x) && Math.Abs(dist1y) <= Math.Abs(dist2y);
-    }
-
     // Create the move plate sprites using the positions deemed possible to move to
     private void MovePlateSpawn(Move m)
     {
+        // Change the given indexes on the board to location in unity space that match the boards location
         float x = m.moveto.x;
         float y = m.moveto.y;
         x *= 1.255f;
         y *= 1.255f;
         x += -4.39f;
         y += -4.39f;
+        // Create a move plate
         GameObject mp = Instantiate(moveplate, new Vector3(x, y, -3f), Quaternion.identity);
         MovePlate mpScript = mp.GetComponent<MovePlate>();
+        // Call script to change move plates color if move is an attack move
         if (m.attack)
         {
             mpScript.attack = true;
         }
+        // Save the origin piece game object in the move plate script
         mpScript.SetReference(gameObject);
+        // Set move plate location according to move
         mpScript.SetCoords(m.moveto);
         
     }
 
+    // Destroy all existing move plates in the unity space
     public void DestroyMovePlates() 
     {
+        // Get all move plates using tags and unity function
         GameObject[] movePlates = GameObject.FindGameObjectsWithTag("MovePlate");
         for (int i = 0; i < movePlates.Length; i++)
         {
+            // Destroy each and every one
             Destroy(movePlates[i]);
         }
     }
 
+    // Based on a selected move, start moving the corrosponding piece in unity
     public void StartMoving(Move move) 
     {
-
-        startingy = yBoard;
-        startingx = xBoard;
-        startingx *= 1.255f;
-        startingy *= 1.255f;
-        startingx += -4.39f;
-        startingy += -4.39f;
-
-        movetox = move.moveto.x;
-        movetoy = move.moveto.y;
-        movetox *= 1.255f;
-        movetoy *= 1.255f;
-        movetox += -4.39f;
-        movetoy += -4.39f;
+        // Save starting position
+        starting = pos;
+        starting *= 1.255f;
+        starting.x +=  - 4.39f;
+        starting.y +=  - 4.39f;
+        // Save end position
+        moveto = move.moveto;
+        moveto *= 1.255f;
+        moveto.x += -4.39f;
+        moveto.y += -4.39f;
     }
+
 
     // ----------------------------------------------- GraveYard -------------------------------------------
     //private void LineMovePlate(Vector2Int dir)
@@ -337,6 +346,22 @@ public class LOAman : MonoBehaviour
     //        }
     //    }
     //}
-
+    //public bool IsBefore(int x, int y, int enemyx, int enemyy) 
+    //{
+    //    int dist1x = x - xBoard, dist2x = enemyx - xBoard, dist1y = y - yBoard, dist2y = enemyy - yBoard;
+    //    return Math.Abs(dist1x) <= Math.Abs(dist2x) && Math.Abs(dist1y) <= Math.Abs(dist2y);
+    //}
+    //// get vector for position and check of its legit for moves
+    //public bool CheckLegit(Vector2Int v)
+    //{
+    //    if (model.IsOnBoard(v.x, v.y))
+    //    {
+    //        if (model.board.IsPieceHere(v))
+    //        {
+    //            return true;
+    //        }
+    //    }
+    //    return false;
+    //}
 }
 
