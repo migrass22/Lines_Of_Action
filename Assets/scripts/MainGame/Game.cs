@@ -154,6 +154,8 @@ public class Game : MonoBehaviour
                 // Regular game 
                 ActivateWhiteAi = false;
                 ActivateBlackAi = false;
+                turnended = false;
+                currentplayer = true;
                 break;
             default:
                 break;
@@ -180,8 +182,6 @@ public class Game : MonoBehaviour
     {
         // Remove all existing pieces
         CleanUp();
-        // Restart texts
-        TurnOffTexts();
         // Restart game
         InitializeGame();
     }
@@ -271,6 +271,7 @@ public class Game : MonoBehaviour
     // Get a boolean for a player and decide if he won the game or not
     private void Winner(bool player)
     {
+        turnended = false;
         // Make sure to change game state to gameover
         gameover = true;
         // Display winner text
